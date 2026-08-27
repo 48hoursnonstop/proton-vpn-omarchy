@@ -16,8 +16,11 @@ repository through Omarchy.
 
 ```bash
 curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/SHA256SUMS
-grep 'proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst$' SHA256SUMS | sha256sum -c -
+curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst.sig
+curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/RELEASE-SIGNING-KEY.asc
+test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
+gpg --import RELEASE-SIGNING-KEY.asc
+gpg --verify proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
 sudo pacman -U ./proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 omarchy plugin add https://github.com/48hoursnonstop/proton-vpn-omarchy.git --enable
@@ -48,6 +51,12 @@ omarchy plugin update proton.omarchy
 
 Backend updates are published as `.pkg.tar.zst` assets under GitHub Releases
 and can be installed with `sudo pacman -U`.
+
+Release packages and checksum manifests are signed with the project's
+dedicated OpenPGP key. Its primary fingerprint is
+`4D01 24DE 0978 8D29 E3A8 798B 12BE 3422 BDA2 422C`; the public key is tracked
+as [RELEASE-SIGNING-KEY.asc](RELEASE-SIGNING-KEY.asc) and attached to each
+release. Verify the fingerprint before trusting a newly downloaded copy.
 
 ## Included functionality
 
