@@ -49,6 +49,7 @@ BarWidget {
     if ('anchorItem' in target) target.anchorItem = button
     if ('hostWidget' in target) target.hostWidget = root
     if ('vpnState' in target) target.vpnState = agentState
+    if ('installerState' in target) target.installerState = backendInstaller
   }
 
   function open() {
@@ -95,6 +96,11 @@ BarWidget {
 
   AgentState {
     id: agentState
+  }
+
+  BackendInstaller {
+    id: backendInstaller
+    vpnState: agentState
   }
 
   Connections {
@@ -148,7 +154,10 @@ BarWidget {
     function account(): void { root.openRoute('account') }
     function diagnostics(): void { root.openRoute('diagnostics') }
 
-    function connect(): void { agentState.quickConnect() }
+    function connect(): void {
+      if (backendInstaller.shouldShow) root.open()
+      else agentState.quickConnect()
+    }
     function disconnect(): void { agentState.disconnect() }
   }
 
@@ -167,7 +176,10 @@ BarWidget {
     // Quattro-style mouse affordances:
     // left = panel, right = quick connect/disconnect, middle = connection details.
     onPressed: function(buttonCode) {
-      if (buttonCode === Qt.RightButton) agentState.toggleConnection()
+      if (buttonCode === Qt.RightButton) {
+        if (backendInstaller.shouldShow) root.open()
+        else agentState.toggleConnection()
+      }
       else if (buttonCode === Qt.MiddleButton) root.openRoute('details')
       else root.toggle()
     }

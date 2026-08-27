@@ -10,9 +10,24 @@ endorsed by Proton AG.
 
 ## Install
 
-The Omarchy plugin is intentionally unprivileged, so installation has two
-parts: install the backend package from the GitHub release, then add this Git
-repository through Omarchy.
+Add and enable the plugin with Omarchy:
+
+```bash
+omarchy plugin add https://github.com/48hoursnonstop/proton-vpn-omarchy.git --enable
+```
+
+Open the Proton VPN bar icon and choose **Install backend**. The first-run
+installer pins the project's OpenPGP fingerprint, verifies the downloaded
+package signature in an isolated keyring, and only then asks Polkit to install
+the package. It configures and starts the per-user agent automatically. No
+`curl | bash` or root shell is used.
+
+Omarchy warns before enabling third-party plugins because they execute inside
+the shell process. Review the source in this repository before confirming.
+
+### Manual backend installation
+
+If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
 curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
@@ -23,16 +38,13 @@ gpg --import RELEASE-SIGNING-KEY.asc
 gpg --verify proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
 sudo pacman -U ./proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
-omarchy plugin add https://github.com/48hoursnonstop/proton-vpn-omarchy.git --enable
 ```
-
-Omarchy warns before enabling third-party plugins because they execute inside
-the shell process. Review the source in this repository before confirming.
 
 ### Package-managed alternative
 
 The Arch package also contains the same plugin frontend. To use that copy
-instead of a Git-managed checkout, replace the last two commands above with:
+instead of a Git-managed checkout, install the verified package manually and
+run:
 
 ```bash
 proton-omarchy-setup install
@@ -49,8 +61,9 @@ Update the Git-managed frontend with:
 omarchy plugin update proton.omarchy
 ```
 
-Backend updates are published as `.pkg.tar.zst` assets under GitHub Releases
-and can be installed with `sudo pacman -U`.
+When that frontend requires a newer backend, opening the plugin offers the same
+signed update flow. Backend updates are also available as `.pkg.tar.zst`
+assets under GitHub Releases for manual installation.
 
 Release packages and checksum manifests are signed with the project's
 dedicated OpenPGP key. Its primary fingerprint is
@@ -77,6 +90,7 @@ OpenVPN engine; it does not ship a tunnel implementation.
 - Arch Linux with Omarchy Quattro 4.x
 - x86-64 Linux with cgroup v2 and eBPF support
 - NetworkManager
+- curl, GnuPG and a working Polkit agent (included by Omarchy)
 
 ## Remove
 

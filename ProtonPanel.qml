@@ -16,6 +16,7 @@ Panel {
   property var anchorItem: null
   property var hostWidget: null
   property QtObject vpnState: null
+  property QtObject installerState: null
   property int cursorIndex: 0
   property bool cursorActive: false
   property string route: 'home'
@@ -26,11 +27,12 @@ Panel {
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property bool onboardingVisible: !vpnState || !vpnState.storeReady ||
-    !vpnState.onboardingComplete
-  readonly property bool authVisible: !onboardingVisible &&
+  readonly property bool installerVisible: installerState && installerState.shouldShow
+  readonly property bool onboardingVisible: !installerVisible &&
+    (!vpnState || !vpnState.storeReady || !vpnState.onboardingComplete)
+  readonly property bool authVisible: !installerVisible && !onboardingVisible &&
     (!vpnState || !vpnState.signedIn)
-  readonly property bool inputViewVisible: onboardingVisible || authVisible
+  readonly property bool inputViewVisible: installerVisible || onboardingVisible || authVisible
   readonly property QtObject stringTable: strings
   readonly property var validRoutes: [
     'home', 'recents', 'locations', 'gateways', 'profiles', 'details',
@@ -182,6 +184,7 @@ Panel {
   }
 
   function open() {
+    if (panelRoot.installerState) panelRoot.installerState.demand()
     if (panelRoot.vpnState) panelRoot.vpnState.demandAgent(true)
     if (panelRoot.vpnState && panelRoot.vpnState.onboardingComplete)
       panelRoot.vpnState.activateBackend()
@@ -191,7 +194,8 @@ Panel {
     Qt.callLater(function() {
       if (!panelRoot.opened) return
       panelRoot.cursorActive = false
-      if (panelRoot.onboardingVisible) onboardingView.focusInitial()
+      if (panelRoot.installerVisible) installerView.focusInitial()
+      else if (panelRoot.onboardingVisible) onboardingView.focusInitial()
       else if (panelRoot.authVisible) authView.focusInitial()
       else keyCatcher.forceActiveFocus()
     })
@@ -199,6 +203,7 @@ Panel {
 
   function close() {
     panelRoot.controller.hide()
+    if (panelRoot.installerState) panelRoot.installerState.releaseDemand()
     if (panelRoot.vpnState) panelRoot.vpnState.demandAgent(false)
   }
 
@@ -266,7 +271,8 @@ Panel {
       cursorActive = false
       resetPagePosition()
       Qt.callLater(function() {
-        if (panelRoot.onboardingVisible) onboardingView.focusInitial()
+        if (panelRoot.installerVisible) installerView.focusInitial()
+        else if (panelRoot.onboardingVisible) onboardingView.focusInitial()
         else if (panelRoot.authVisible) authView.focusInitial()
         else keyCatcher.forceActiveFocus()
       })
@@ -275,6 +281,16 @@ Panel {
 
   onOnboardingVisibleChanged: {
     if (!onboardingVisible && vpnState) vpnState.activateBackend()
+  }
+
+  onInstallerVisibleChanged: {
+    if (!opened) return
+    Qt.callLater(function() {
+      if (panelRoot.installerVisible) installerView.focusInitial()
+      else if (panelRoot.onboardingVisible) onboardingView.focusInitial()
+      else if (panelRoot.authVisible) authView.focusInitial()
+      else keyCatcher.forceActiveFocus()
+    })
   }
 
   onHasGatewaysChanged: {
@@ -300,8 +316,10 @@ Panel {
     contentWidth: panel.fittedContentWidth(Style.space(380))
     contentHeight: panelRoot.inputViewVisible
       ? panel.fittedContentHeight(
-          panelRoot.onboardingVisible
-            ? onboardingView.implicitHeight : authView.implicitHeight,
+          panelRoot.installerVisible
+            ? installerView.implicitHeight
+            : panelRoot.onboardingVisible
+              ? onboardingView.implicitHeight : authView.implicitHeight,
           Style.space(590))
       : panel.fittedContentHeight(Style.space(590), Style.space(590))
 
@@ -358,10 +376,12 @@ Panel {
         anchors.right: parent.right
         anchors.bottom: rootNavigation.visible ? rootNavigation.top : parent.bottom
         contentWidth: width
-        contentHeight: panelRoot.onboardingVisible
-          ? onboardingView.implicitHeight
-          : panelRoot.authVisible
-            ? authView.implicitHeight
+        contentHeight: panelRoot.installerVisible
+          ? installerView.implicitHeight
+          : panelRoot.onboardingVisible
+            ? onboardingView.implicitHeight
+            : panelRoot.authVisible
+              ? authView.implicitHeight
             : panelRoot.route === 'home'
               ? homeColumn.implicitHeight : routeColumn.implicitHeight
         clip: true
@@ -369,6 +389,18 @@ Panel {
         flickableDirection: Flickable.VerticalFlick
         interactive: contentHeight > height
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+        ProtonInstallerView {
+          id: installerView
+          visible: panelRoot.installerVisible
+          width: panelFlick.width
+          installerState: panelRoot.installerState
+          strings: panelRoot.stringTable
+          foreground: panelRoot.foreground
+          urgent: panelRoot.urgent
+          dim: panelRoot.dim
+          fontFamily: panelRoot.fontFamily
+        }
 
         ProtonOnboardingView {
           id: onboardingView

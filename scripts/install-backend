@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly PACKAGE_NAME='proton-vpn-omarchy'
+readonly TARGET_VERSION='0.8.0-3'
+readonly PACKAGE_FILE="${PACKAGE_NAME}-${TARGET_VERSION}-x86_64.pkg.tar.zst"
+readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0'
+readonly RELEASE_FINGERPRINT='4D0124DE09788D29E3A8798B12BE3422BDA2422C'
+
+mode="${1:---install}"
+case "$mode" in
+  --check | --install | --verify-only) ;;
+  *) printf 'Usage: %s [--check|--install|--verify-only]\n' "$0" >&2; exit 2 ;;
+esac
+
+if [[ $mode == --check ]]; then
+  command -v pacman >/dev/null 2>&1 || exit 1
+  command -v vercmp >/dev/null 2>&1 || exit 1
+  installed_version="$(pacman -Q "$PACKAGE_NAME" 2>/dev/null | awk '{ print $2 }' || true)"
+  [[ -n $installed_version ]] || exit 1
+  printf '%s\n' "$installed_version"
+  (( $(vercmp "$installed_version" "$TARGET_VERSION") >= 0 ))
+  exit
+fi
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+plugin_dir="$(dirname -- "$script_dir")"
+public_key="$plugin_dir/RELEASE-SIGNING-KEY.asc"
+runtime_dir="${XDG_RUNTIME_DIR:-}"
+status_file=''
+work_dir=''
+progress=0
+error_code='unexpected_error'
+
+write_status() {
+  local state="$1"
+  local value="$2"
+  local code="${3:-}"
+  local temporary="${status_file}.tmp.$$"
+
+  [[ -n $status_file ]] || return 0
+  printf '{"version":1,"state":"%s","progress":%d,"code":"%s"}\n' \
+    "$state" "$value" "$code" >"$temporary"
+  chmod 0600 "$temporary"
+  mv -f -- "$temporary" "$status_file"
+}
+
+set_stage() {
+  progress="$1"
+  write_status "$2" "$progress"
+}
+
+fail() {
+  error_code="$1"
+  shift
+  printf 'proton-vpn-omarchy-installer: %s\n' "$*" >&2
+  exit 1
+}
+
+cleanup() {
+  if [[ -n $work_dir && -n $runtime_dir &&
+        $work_dir == "$runtime_dir"/proton-vpn-omarchy-install.* ]]; then
+    rm -rf -- "$work_dir"
+  fi
+}
+
+on_exit() {
+  local result=$?
+  set +e
+  if (( result != 0 )); then
+    write_status error "$progress" "$error_code"
+  fi
+  cleanup
+}
+trap on_exit EXIT
+
+[[ ${EUID:-$(id -u)} -ne 0 ]] || fail run_as_user 'Run the installer as the desktop user, not root.'
+[[ -n $runtime_dir && $runtime_dir == /* && -d $runtime_dir && -O $runtime_dir ]] ||
+  fail runtime_unavailable 'XDG_RUNTIME_DIR is unavailable or is not owned by this user.'
+
+umask 077
+status_file="$runtime_dir/proton-vpn-omarchy-installer.json"
+lock_file="$runtime_dir/proton-vpn-omarchy-installer.lock"
+exec 9>"$lock_file"
+flock -n 9 || fail already_running 'Another backend installation is already running.'
+
+set_stage 5 preflight
+
+[[ -f /etc/arch-release ]] || fail unsupported_system 'Arch Linux is required.'
+[[ $(uname -m) == x86_64 ]] || fail unsupported_architecture 'This release requires x86-64.'
+[[ -r $public_key ]] || fail signing_key_missing 'The embedded release signing key is missing.'
+
+for command_name in curl gpg pacman pkexec systemctl vercmp omarchy; do
+  command -v "$command_name" >/dev/null 2>&1 ||
+    fail missing_requirement "Required command is unavailable: $command_name"
+done
+
+installed_version="$(pacman -Q "$PACKAGE_NAME" 2>/dev/null | awk '{ print $2 }' || true)"
+if [[ $mode == --install && -n $installed_version ]] &&
+   (( $(vercmp "$installed_version" "$TARGET_VERSION") >= 0 )); then
+  set_stage 85 configuring
+  [[ -x /usr/bin/proton-omarchy-setup ]] ||
+    fail setup_missing 'The installed package does not contain proton-omarchy-setup.'
+  /usr/bin/proton-omarchy-setup backend ||
+    fail backend_configuration_failed 'The backend user services could not be configured.'
+  systemctl --user reset-failed proton-omarchy-agent.service proton-omarchy-agent.socket || true
+  systemctl --user start proton-omarchy-agent.socket ||
+    fail backend_start_failed 'The backend user socket could not be started.'
+  set_stage 100 complete
+  exit 0
+fi
+
+set_stage 15 verifying_key
+primary_fingerprint="$(
+  gpg --batch --show-keys --with-colons "$public_key" |
+    awk -F: '$1 == "fpr" { print $10; exit }'
+)"
+primary_count="$(
+  gpg --batch --show-keys --with-colons "$public_key" |
+    awk -F: '$1 == "pub" { count += 1 } END { print count + 0 }'
+)"
+[[ $primary_count == 1 && $primary_fingerprint == "$RELEASE_FINGERPRINT" ]] ||
+  fail signing_key_mismatch 'The embedded signing key does not match the pinned fingerprint.'
+
+work_dir="$(mktemp -d "$runtime_dir/proton-vpn-omarchy-install.XXXXXX")"
+package_path="$work_dir/$PACKAGE_FILE"
+signature_path="$work_dir/release-signature.sig"
+verification_home="$work_dir/gnupg"
+verification_status="$work_dir/gpg-status"
+
+set_stage 25 downloading_package
+if ! curl --fail --location --silent --show-error \
+  --proto '=https' --tlsv1.2 --retry 3 --retry-all-errors \
+  --connect-timeout 15 --max-time 300 \
+  --output "$package_path" "$RELEASE_BASE/$PACKAGE_FILE"; then
+  fail package_download_failed 'The signed backend package could not be downloaded.'
+fi
+
+set_stage 45 downloading_signature
+if ! curl --fail --location --silent --show-error \
+  --proto '=https' --tlsv1.2 --retry 3 --retry-all-errors \
+  --connect-timeout 15 --max-time 60 \
+  --output "$signature_path" "$RELEASE_BASE/$PACKAGE_FILE.sig"; then
+  fail signature_download_failed 'The package signature could not be downloaded.'
+fi
+
+mkdir -m 0700 "$verification_home"
+GNUPGHOME="$verification_home" gpg --batch --quiet --import "$public_key" ||
+  fail signing_key_import_failed 'The pinned signing key could not be imported.'
+
+set_stage 65 verifying_package
+if ! GNUPGHOME="$verification_home" gpg --batch --status-fd 1 \
+     --verify "$signature_path" "$package_path" >"$verification_status" 2>/dev/null; then
+  fail signature_invalid 'The downloaded package signature is invalid.'
+fi
+verified_primary="$(
+  awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { print $NF; exit }' \
+    "$verification_status"
+)"
+[[ $verified_primary == "$RELEASE_FINGERPRINT" ]] ||
+  fail signature_key_mismatch 'The package was not signed by the pinned release key.'
+
+package_identity="$(pacman -Qp "$package_path" 2>/dev/null || true)"
+[[ $package_identity == "$PACKAGE_NAME $TARGET_VERSION" ]] ||
+  fail package_identity_mismatch 'The signed package has an unexpected name or version.'
+
+if [[ $mode == --verify-only ]]; then
+  set_stage 100 verified
+  exit 0
+fi
+
+set_stage 72 awaiting_authorization
+set +e
+pkexec /usr/bin/pacman --noconfirm -U "$package_path"
+install_result=$?
+set -e
+case "$install_result" in
+  0) ;;
+  126) fail authorization_cancelled 'Administrative authorization was cancelled.' ;;
+  127) fail authorization_failed 'Administrative authorization could not be obtained.' ;;
+  *) fail package_install_failed "pacman failed with status $install_result." ;;
+esac
+
+set_stage 88 configuring
+installed_version="$(pacman -Q "$PACKAGE_NAME" 2>/dev/null | awk '{ print $2 }' || true)"
+[[ -n $installed_version ]] &&
+  (( $(vercmp "$installed_version" "$TARGET_VERSION") >= 0 )) ||
+  fail package_install_incomplete 'The expected backend package is not installed.'
+[[ -x /usr/bin/proton-omarchy-setup ]] ||
+  fail setup_missing 'The installed package does not contain proton-omarchy-setup.'
+
+/usr/bin/proton-omarchy-setup backend ||
+  fail backend_configuration_failed 'The backend user services could not be configured.'
+set_stage 96 starting_backend
+systemctl --user reset-failed proton-omarchy-agent.service proton-omarchy-agent.socket || true
+if systemctl --user is-active proton-omarchy-agent.service >/dev/null 2>&1; then
+  systemctl --user restart proton-omarchy-agent.service ||
+    fail backend_start_failed 'The backend user service could not be restarted.'
+fi
+systemctl --user start proton-omarchy-agent.socket ||
+  fail backend_start_failed 'The backend user socket could not be started.'
+
+set_stage 100 complete

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+shell_root="${OMARCHY_SHELL_ROOT:-/usr/share/omarchy/shell}"
+
+command -v quickshell >/dev/null 2>&1 || {
+  printf 'INSTALLER QML RUNTIME: BLOCKED (quickshell is unavailable)\n' >&2
+  exit 2
+}
+[[ -d $shell_root/Commons && -d $shell_root/Ui ]] || {
+  printf 'INSTALLER QML RUNTIME: BLOCKED (Omarchy imports are unavailable)\n' >&2
+  exit 2
+}
+
+test_root="$(mktemp -d /tmp/proton-installer-qml.XXXXXX)"
+cleanup() {
+  rm -rf -- "$test_root"
+}
+trap cleanup EXIT
+
+cp "$root"/*.qml "$test_root/"
+cp -a "$root/components" "$root/assets" "$root/scripts" "$test_root/"
+cp "$root/RELEASE-SIGNING-KEY.asc" "$test_root/"
+cp "$root/tests/qml/installer-shell.qml" "$test_root/shell.qml"
+ln -s "$shell_root/Commons" "$test_root/Commons"
+ln -s "$shell_root/Ui" "$test_root/Ui"
+
+set +e
+output="$(
+  env QT_QPA_PLATFORM=offscreen quickshell --no-color -p "$test_root" 2>&1
+)"
+quickshell_status=$?
+set -e
+if (( quickshell_status != 0 )); then
+  printf '%s\n' "$output" >&2
+  printf 'INSTALLER QML RUNTIME: quickshell exited %s\n' "$quickshell_status" >&2
+  exit 1
+fi
+result="$(printf '%s\n' "$output" | grep 'INSTALLER_QML' | tail -n 1)"
+[[ $result == *'INSTALLER_QML true true true true'* ]] || {
+  printf '%s\n' "$output" >&2
+  printf 'INSTALLER QML RUNTIME: unexpected result\n' >&2
+  exit 1
+}
+if printf '%s\n' "$output" | grep -Eiq \
+  'ReferenceError|TypeError|Cannot assign|Unable to assign|is not a type|Binding loop|failed to load'; then
+  printf '%s\n' "$output" >&2
+  printf 'INSTALLER QML RUNTIME: QML error\n' >&2
+  exit 1
+fi
+
+printf 'INSTALLER QML RUNTIME: PASS\n'

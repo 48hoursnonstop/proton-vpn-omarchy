@@ -280,6 +280,13 @@ QtObject {
     }
   }
 
+  function retryAgentNow() {
+    socketRetryTimer.stop()
+    socketRetryAttempt = 0
+    socketWanted = false
+    reconnectTimer.restart()
+  }
+
   function markAgentUnavailable() {
     agentAvailable = false
     backendKind = ''
@@ -563,7 +570,7 @@ QtObject {
   function hello() {
     send('hello', {
       client: 'plugin',
-      client_version: '0.8.0',
+      client_version: '0.8.1',
       client_instance_id: clientInstanceId
     })
   }
@@ -1448,6 +1455,12 @@ QtObject {
     onTriggered: root.socketWanted = root.socketDemandActive()
   }
 
+  property Timer reconnectTimer: Timer {
+    interval: 100
+    repeat: false
+    onTriggered: root.socketWanted = root.socketDemandActive()
+  }
+
   property Timer postConnectTimer: Timer {
     interval: 1000
     repeat: false
@@ -1472,6 +1485,13 @@ QtObject {
       if (connected) {
         root.socketRetryTimer.stop()
         root.socketRetryAttempt = 0
+        if (root.lastErrorCode === 'agent_socket_error' ||
+            root.lastErrorCode === 'agent_disconnected') {
+          root.lastError = ''
+          root.lastErrorCode = ''
+          root.lastErrorDetails = null
+          root.lastErrorRetryable = false
+        }
         root.hello()
         if (root.backendDemanded) root.activateBackend()
       }

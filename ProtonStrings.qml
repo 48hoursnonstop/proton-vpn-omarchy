@@ -20,6 +20,21 @@ QtObject {
     case 'migration_found': return choose('Se encontró información local del cliente anterior y se migrará sin borrar el original.', 'Local data from the earlier client was found and will be migrated without deleting the original.')
     case 'continue': return choose('Continuar', 'Continue')
     case 'store_unavailable': return choose('El almacén local todavía no está disponible.', 'The local store is not available yet.')
+    case 'install_backend_title': return choose('Instalar Proton VPN', 'Install Proton VPN')
+    case 'install_backend_description': return choose('El plugin está listo. Instala ahora el backend firmado para conectar y administrar la VPN.', 'The plugin is ready. Install the signed backend to connect and manage the VPN.')
+    case 'repair_backend_title': return choose('Preparar el backend', 'Prepare the backend')
+    case 'repair_backend_description': return choose('El paquete existe, pero el agente todavía no responde. Podemos configurar y arrancar sus servicios de usuario.', 'The package exists, but the agent is not responding yet. Its user services can be configured and started.')
+    case 'update_backend_title': return choose('Actualizar Proton VPN', 'Update Proton VPN')
+    case 'update_backend_description': return choose('Hay un backend firmado más reciente requerido por esta versión del plugin.', 'A newer signed backend required by this plugin version is available.')
+    case 'install_backend': return choose('Instalar backend', 'Install backend')
+    case 'repair_backend': return choose('Reparar backend', 'Repair backend')
+    case 'update_backend': return choose('Actualizar backend', 'Update backend')
+    case 'try_again': return choose('Intentar de nuevo', 'Try again')
+    case 'signed_release': return choose('Release firmado', 'Signed release')
+    case 'signed_release_description': return choose('La firma OpenPGP se verifica antes de pedir privilegios.', 'The OpenPGP signature is verified before requesting privileges.')
+    case 'signing_fingerprint': return '4D01 24DE 0978 8D29 E3A8 798B 12BE 3422 BDA2 422C'
+    case 'administrator_authorization_notice': return choose('Polkit pedirá autorización una sola vez para instalar el paquete y sus dependencias.', 'Polkit will request authorization once to install the package and its dependencies.')
+    case 'installer_detecting': return choose('Comprobando la instalación…', 'Checking the installation…')
     case 'locations': return choose('Ubicaciones', 'Locations')
     case 'countries': return choose('Países', 'Countries')
     case 'gateways': return choose('Gateways', 'Gateways')
@@ -253,6 +268,55 @@ QtObject {
     case 'backend_unavailable': return choose('El backend oficial de Proton no está disponible.', 'The official Proton backend is unavailable.')
     case 'retryable_hint': return choose('Puedes volver a intentarlo.', 'You can try again.')
     default: return String(key || '')
+    }
+  }
+
+  function installerStage(stage) {
+    switch (String(stage || '')) {
+    case 'detecting': return choose('Comprobando la instalación…', 'Checking the installation…')
+    case 'missing': return choose('El backend todavía no está instalado.', 'The backend is not installed yet.')
+    case 'installed': return choose('Backend instalado; esperando al agente…', 'Backend installed; waiting for the agent…')
+    case 'launching': return choose('Iniciando el instalador…', 'Starting the installer…')
+    case 'preflight': return choose('Comprobando el sistema…', 'Checking the system…')
+    case 'downloading_package': return choose('Descargando el paquete firmado…', 'Downloading the signed package…')
+    case 'downloading_signature': return choose('Descargando la firma…', 'Downloading the signature…')
+    case 'verifying_key': return choose('Verificando la clave de publicación…', 'Verifying the release key…')
+    case 'verifying_package': return choose('Verificando la firma del paquete…', 'Verifying the package signature…')
+    case 'awaiting_authorization': return choose('Esperando autorización administrativa…', 'Waiting for administrative authorization…')
+    case 'configuring': return choose('Configurando los servicios de usuario…', 'Configuring user services…')
+    case 'starting_backend': return choose('Iniciando el backend…', 'Starting the backend…')
+    case 'complete': return choose('Instalación completa; iniciando el backend…', 'Installation complete; starting the backend…')
+    case 'verified': return choose('Firma verificada.', 'Signature verified.')
+    case 'ready': return choose('Proton VPN está listo.', 'Proton VPN is ready.')
+    case 'error': return choose('No se pudo completar la instalación.', 'The installation could not be completed.')
+    default: return choose('Preparando la instalación…', 'Preparing installation…')
+    }
+  }
+
+  function installerError(code) {
+    switch (String(code || '')) {
+    case 'already_running': return choose('Ya hay otra instalación en curso.', 'Another installation is already running.')
+    case 'authorization_cancelled': return choose('Se canceló la autorización administrativa.', 'Administrative authorization was cancelled.')
+    case 'authorization_failed': return choose('No se pudo obtener autorización administrativa.', 'Administrative authorization could not be obtained.')
+    case 'unsupported_system': return choose('Este instalador requiere Arch Linux.', 'This installer requires Arch Linux.')
+    case 'unsupported_architecture': return choose('Este release requiere un sistema x86-64.', 'This release requires an x86-64 system.')
+    case 'runtime_unavailable': return choose('La sesión de escritorio no tiene un directorio de ejecución válido.', 'The desktop session has no valid runtime directory.')
+    case 'missing_requirement': return choose('Falta una herramienta requerida por el instalador.', 'A tool required by the installer is missing.')
+    case 'signing_key_missing': return choose('Falta la clave pública incluida con el plugin.', 'The public key bundled with the plugin is missing.')
+    case 'signing_key_mismatch': return choose('La clave pública no coincide con el fingerprint fijado.', 'The public key does not match the pinned fingerprint.')
+    case 'signing_key_import_failed': return choose('No se pudo preparar la clave de publicación para verificar el paquete.', 'The release key could not be prepared for package verification.')
+    case 'package_download_failed': return choose('No se pudo descargar el paquete firmado.', 'The signed package could not be downloaded.')
+    case 'signature_download_failed': return choose('No se pudo descargar la firma del paquete.', 'The package signature could not be downloaded.')
+    case 'signature_invalid':
+    case 'signature_key_mismatch': return choose('La firma del paquete no es válida. No se instaló nada.', 'The package signature is invalid. Nothing was installed.')
+    case 'package_identity_mismatch': return choose('El paquete firmado no tiene el nombre o la versión esperados.', 'The signed package has an unexpected name or version.')
+    case 'package_install_failed':
+    case 'package_install_incomplete': return choose('Pacman no pudo instalar el backend.', 'Pacman could not install the backend.')
+    case 'setup_missing': return choose('El paquete instalado no contiene el configurador esperado.', 'The installed package does not contain the expected setup helper.')
+    case 'backend_configuration_failed': return choose('No se pudieron configurar los servicios de usuario.', 'The user services could not be configured.')
+    case 'backend_start_failed': return choose('El backend se instaló, pero su servicio no pudo iniciarse.', 'The backend was installed, but its service could not be started.')
+    case 'run_as_user': return choose('Ejecuta el instalador desde tu sesión de Omarchy, no como root.', 'Run the installer from your Omarchy session, not as root.')
+    default: return choose('No se pudo completar la instalación. Puedes intentarlo de nuevo.', 'The installation could not be completed. You can try again.')
     }
   }
 

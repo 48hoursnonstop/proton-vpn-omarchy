@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
+import '.' as ProtonComponents
 
 // Small shell-native action row. It intentionally uses Quattro's CursorSurface
 // and spacing/font system so keyboard and pointer states look like first-party
@@ -56,7 +57,7 @@ CursorSurface {
       Layout.preferredHeight: root.iconSize
       Layout.alignment: Qt.AlignVCenter
 
-      ProtonMobileIcon {
+      ProtonComponents.ProtonMobileIcon {
         anchors.centerIn: parent
         iconName: root.iconName
         sourceOverride: root.iconSource
@@ -115,7 +116,7 @@ CursorSurface {
         font.pixelSize: Style.font.caption
       }
 
-      ProtonMobileIcon {
+      ProtonComponents.ProtonMobileIcon {
         iconName: root.detailIconName
         iconColor: root.checked ? Color.accent : root.dimForeground
         iconSize: Style.font.iconSmall
