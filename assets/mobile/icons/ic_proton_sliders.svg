@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!--Source: https://raw.githubusercontent.com/ProtonMail/protoncore_android/1b87f94ebfdfaf5e67145e8668efc52dbb931e0b/presentation/src/main/res/drawable/ic_proton_sliders.xml; white mask for Quattro tint-->
+  <path d="M19.406,3.75a3,3 0,0 0,-5.812 0H2.25a0.75,0.75 0,1 0,0 1.5h11.344a3,3 0,0 0,5.812 0h2.344a0.75,0.75 0,0 0,0 -1.5h-2.344ZM18,4.5a1.5,1.5 0,1 1,-3 0,1.5 1.5,0 0,1 3,0Z" fill="#fff" fill-rule="evenodd" />
+  <path d="M2.25,18.75a0.75,0.75 0,0 0,0 1.5h11.344a3,3 0,0 0,5.812 0h2.344a0.75,0.75 0,0 0,0 -1.5h-2.344a3,3 0,0 0,-5.812 0H2.25ZM16.5,18a1.5,1.5 0,1 1,0 3,1.5 1.5,0 0,1 0,-3Z" fill="#fff" fill-rule="evenodd" />
+  <path d="M4.594,11.25H2.25a0.75,0.75 0,0 0,-0.74 0.633L1.5,12a0.748,0.748 0,0 0,0.637 0.741l0.113,0.009h2.344a3,3 0,0 0,5.812 0H21.75c0.122,0 0.237,-0.03 0.338,-0.082l0.062,-0.035a0.75,0.75 0,0 0,-0.4 -1.383H10.406a3,3 0,0 0,-5.812 0ZM9,12a1.5,1.5 0,1 0,-3 0,1.5 1.5,0 0,0 3,0Z" fill="#fff" fill-rule="evenodd" />
+</svg>

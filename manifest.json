@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "proton.omarchy",
+  "name": "Proton VPN",
+  "version": "0.8.0",
+  "author": "Proton VPN for Omarchy contributors",
+  "license": "GPL-3.0-or-later",
+  "description": "Native Proton VPN status and controls for Omarchy Quattro.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Proton VPN",
+    "description": "VPN status, quick connection controls, and shortcuts.",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

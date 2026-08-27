@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!--Source: https://raw.githubusercontent.com/ProtonMail/protoncore_android/1b87f94ebfdfaf5e67145e8668efc52dbb931e0b/presentation/src/main/res/drawable/ic_proton_arrow_rotate_right.xml; white mask for Quattro tint-->
+  <path d="M12.3086,4.8575C7.782,4.8575 4.1124,8.5271 4.1124,13.0538C4.1124,17.5804 7.782,21.25 12.3086,21.25C16.8353,21.25 20.5049,17.5804 20.5049,13.0538C20.5049,10.6058 19.4317,8.4084 17.7301,6.9066M11.6914,6.965L13.5881,5.0683C13.7045,4.9519 13.7045,4.7631 13.5881,4.6467L11.6914,2.75" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
+</svg>
