@@ -57,11 +57,11 @@ If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
 curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig
+curl -fL -o proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.detached-sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig
 curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/RELEASE-SIGNING-KEY.asc
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.detached-sig proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
 sudo pacman -U ./proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
