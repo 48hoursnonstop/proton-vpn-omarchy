@@ -230,16 +230,6 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    Text {
-      visible: root.vpnState && root.vpnState.killSwitch && root.enabledValue
-      width: parent.width
-      text: root.label('split_kill_switch_conflict')
-      color: root.urgent
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.bodySmall
-      wrapMode: Text.WordWrap
-    }
-
     PanelSectionHeader {
       visible: root.ipRangesSupported
       text: root.label('ip_ranges').toUpperCase()

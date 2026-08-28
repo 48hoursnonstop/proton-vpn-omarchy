@@ -524,6 +524,19 @@ Panel {
             font.pixelSize: Style.font.caption
             horizontalAlignment: Text.AlignHCenter
           }
+
+          Text {
+            visible: panelRoot.vpnState && panelRoot.vpnState.connecting &&
+              panelRoot.vpnState.networkConflicts.length > 0
+            width: parent.width
+            text: strings.networkConflictWarning(
+              panelRoot.vpnState.networkConflicts)
+            color: panelRoot.urgent
+            font.family: panelRoot.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+          }
         }
       }
 

@@ -8,6 +8,22 @@ QtObject {
     return spanish ? es : en
   }
 
+  function profileCopyName(name) {
+    var value = String(name || '').trim()
+    return spanish ? 'Copia de ' + value : value + ' copy'
+  }
+
+  function networkConflictWarning(conflicts) {
+    var values = Array.isArray(conflicts) ? conflicts.slice(0, 3) : []
+    var message = choose(
+      'Otra VPN o interfaz de túnel podría interferir con esta conexión.',
+      'Another VPN or tunnel interface might interfere with this connection.'
+    )
+    for (var index = 0; index < values.length; ++index)
+      message += '\n• ' + String(values[index])
+    return message
+  }
+
   function text(key) {
     switch (String(key || '')) {
     case 'welcome_title': return choose('Bienvenido a Proton VPN', 'Welcome to Proton VPN')
@@ -93,6 +109,8 @@ QtObject {
     case 'trackers': return choose('Rastreadores', 'Trackers')
     case 'port_forwarding': return choose('Reenvío de puertos', 'Port forwarding')
     case 'save_profile': return choose('Guardar perfil', 'Save profile')
+    case 'duplicate_profile': return choose('Duplicar perfil', 'Duplicate profile')
+    case 'duplicate_profile_description': return choose('Crear una copia independiente con estos ajustes', 'Create an independent copy with these settings')
     case 'delete_profile': return choose('Eliminar perfil', 'Delete profile')
     case 'delete_profile_confirm': return choose('¿Eliminar este perfil y sus recientes asociados?', 'Delete this profile and its associated recents?')
     case 'delete': return choose('Eliminar', 'Delete')
@@ -224,7 +242,7 @@ QtObject {
     case 'search_apps': return choose('Buscar aplicaciones', 'Search applications')
     case 'manual_executable': return choose('Ejecutable o ID de Flatpak', 'Executable or Flatpak ID')
     case 'split_requires_app': return choose('Selecciona al menos una aplicación o rango IP para activar este modo.', 'Select at least one application or IP range to enable this mode.')
-    case 'split_kill_switch_conflict': return choose('Desactiva Kill Switch antes de activar el túnel dividido.', 'Turn off Kill Switch before enabling split tunneling.')
+    case 'split_kill_switch_conflict': return choose('Actualiza el backend para combinar Kill Switch y túnel dividido.', 'Update the backend to combine Kill Switch and split tunneling.')
     case 'ip_ranges': return choose('Direcciones IP', 'IP addresses')
     case 'ip_range_placeholder': return choose('Dirección o CIDR, p. ej. 192.168.1.0/24', 'Address or CIDR, e.g. 192.168.1.0/24')
     case 'add_ip_range': return choose('Agregar rango IP', 'Add IP range')
@@ -288,8 +306,11 @@ QtObject {
     case 'installed': return choose('Backend instalado; esperando al agente…', 'Backend installed; waiting for the agent…')
     case 'launching': return choose('Iniciando el instalador…', 'Starting the installer…')
     case 'preflight': return choose('Comprobando el sistema…', 'Checking the system…')
+    case 'installing_verifier': return choose('Instalando el verificador firmado de Arch…', 'Installing Arch’s signed verifier…')
     case 'downloading_package': return choose('Descargando el paquete firmado…', 'Downloading the signed package…')
     case 'downloading_signature': return choose('Descargando la firma…', 'Downloading the signature…')
+    case 'downloading_attestation': return choose('Descargando la procedencia del build…', 'Downloading build provenance…')
+    case 'verifying_provenance': return choose('Verificando el build y el commit de origen…', 'Verifying the build and source commit…')
     case 'verifying_key': return choose('Verificando la clave de publicación…', 'Verifying the release key…')
     case 'verifying_package': return choose('Verificando la firma del paquete…', 'Verifying the package signature…')
     case 'awaiting_authorization': return choose('Esperando autorización administrativa…', 'Waiting for administrative authorization…')
@@ -312,11 +333,18 @@ QtObject {
     case 'unsupported_architecture': return choose('Este release requiere un sistema x86-64.', 'This release requires an x86-64 system.')
     case 'runtime_unavailable': return choose('La sesión de escritorio no tiene un directorio de ejecución válido.', 'The desktop session has no valid runtime directory.')
     case 'missing_requirement': return choose('Falta una herramienta requerida por el instalador.', 'A tool required by the installer is missing.')
+    case 'verifier_install_failed':
+    case 'verifier_unavailable': return choose('No se pudo preparar el verificador de procedencia firmado por Arch.', 'The Arch-signed provenance verifier could not be prepared.')
+    case 'release_metadata_invalid': return choose('El plugin no contiene metadatos completos para este release.', 'The plugin has incomplete metadata for this release.')
     case 'signing_key_missing': return choose('Falta la clave pública incluida con el plugin.', 'The public key bundled with the plugin is missing.')
     case 'signing_key_mismatch': return choose('La clave pública no coincide con el fingerprint fijado.', 'The public key does not match the pinned fingerprint.')
     case 'signing_key_import_failed': return choose('No se pudo preparar la clave de publicación para verificar el paquete.', 'The release key could not be prepared for package verification.')
     case 'package_download_failed': return choose('No se pudo descargar el paquete firmado.', 'The signed package could not be downloaded.')
     case 'signature_download_failed': return choose('No se pudo descargar la firma del paquete.', 'The package signature could not be downloaded.')
+    case 'attestation_download_failed': return choose('No se pudo descargar la procedencia verificable del paquete.', 'The package provenance could not be downloaded.')
+    case 'release_size_mismatch':
+    case 'release_digest_mismatch': return choose('Un archivo del release no coincide con su tamaño o digest fijado. No se instaló nada.', 'A release file does not match its pinned size or digest. Nothing was installed.')
+    case 'provenance_invalid': return choose('El paquete no fue producido por el workflow y commit fijados. No se instaló nada.', 'The package was not produced by the pinned workflow and commit. Nothing was installed.')
     case 'signature_invalid':
     case 'signature_key_mismatch': return choose('La firma del paquete no es válida. No se instaló nada.', 'The package signature is invalid. Nothing was installed.')
     case 'package_identity_mismatch': return choose('El paquete firmado no tiene el nombre o la versión esperados.', 'The signed package has an unexpected name or version.')
@@ -413,6 +441,7 @@ QtObject {
     case 'bridge_io':
     case 'core_unavailable': return choose('El backend oficial de Proton no está disponible.', 'The official Proton backend is unavailable.')
     case 'connection_failed': return choose('No se pudo completar la conexión VPN.', 'The VPN connection could not be completed.')
+    case 'network_conflict_detected': return choose('Otra VPN o interfaz de túnel podría impedir la conexión. Ciérrala y vuelve a intentar.', 'Another VPN or tunnel interface might be preventing the connection. Close it and try again.')
     case 'local_agent_failed': return choose('Proton rechazó la configuración de esta conexión.', 'Proton rejected this connection configuration.')
     case 'local_agent_timeout': return choose('Proton no confirmó la sesión VPN a tiempo.', 'Proton did not confirm the VPN session in time.')
     case 'local_agent_disconnected': return choose('Se perdió el canal de control cifrado de Proton.', 'Proton’s encrypted control channel was lost.')
@@ -430,7 +459,7 @@ QtObject {
     case 'setting_conflict':
     case 'profile_settings_conflict': return choose('Esta configuración entra en conflicto con otra opción activa.', 'This setting conflicts with another active option.')
     case 'split_tunneling_unavailable': return choose('El túnel dividido no está disponible en este sistema.', 'Split tunneling is unavailable on this system.')
-    case 'split_tunneling_kill_switch_conflict': return choose('Desactiva Kill Switch antes de activar el túnel dividido.', 'Turn off Kill Switch before enabling split tunneling.')
+    case 'split_tunneling_kill_switch_conflict': return choose('Actualiza el backend para combinar Kill Switch y túnel dividido.', 'Update the backend to combine Kill Switch and split tunneling.')
     case 'split_tunneling_empty_selection': return choose('Selecciona al menos una aplicación o rango IP antes de activar este modo.', 'Select at least one application or IP range before enabling this mode.')
     case 'server_not_found': return choose('No se encontró un servidor disponible para ese destino.', 'No available server was found for that target.')
     case 'server_feature_mismatch': return choose('El servidor seleccionado no admite la función solicitada.', 'The selected server does not support the requested feature.')

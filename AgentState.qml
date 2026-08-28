@@ -27,12 +27,12 @@ QtObject {
   property bool frontendDemanded: false
   property bool socketWanted: false
   onSocketWantedChanged: {
-    if (agentSocket.connected !== socketWanted)
-      agentSocket.connected = socketWanted
+    if (ipcBridge.running !== socketWanted)
+      ipcBridge.running = socketWanted
   }
   property int socketRetryAttempt: 0
   readonly property bool agentConnecting:
-    socketPath.length > 0 && !agentSocket.connected
+    socketPath.length > 0 && socketWanted && !agentAvailable
   property bool coreAvailable: false
   readonly property bool backendReady: coreAvailable // pre-audit compatibility alias
   property bool settingsKnown: false
@@ -110,6 +110,7 @@ QtObject {
   property string serverIp: ''
   property string protocol: ''
   property string connectionErrorCode: ''
+  property var networkConflicts: []
   property int restrictionReasonCode: 0
   property int latencyMs: 0
   property bool trafficKnown: false
@@ -184,7 +185,7 @@ QtObject {
   property int nextRequestId: 1
   readonly property string clientInstanceId: 'plugin-' + Date.now() + '-' +
     Math.floor(Math.random() * 0x100000000).toString(16)
-  readonly property string clientVersion: '0.8.4'
+  readonly property string clientVersion: '0.8.5'
   property string serverClientInstanceId: ''
   property var pendingRequests: ({})
   property var pendingConnectionRecents: ({})
@@ -231,7 +232,7 @@ QtObject {
     configurationOperationBusy
   readonly property bool storeOperationBusy: methodsBusy([
     'onboarding.complete', 'preferences.set', 'profiles.save',
-    'profiles.delete', 'excluded_locations.set', 'recents.record', 'recents.pin', 'recents.delete',
+    'profiles.duplicate', 'profiles.delete', 'excluded_locations.set', 'recents.record', 'recents.pin', 'recents.delete',
     'default_connection.set'
   ])
   readonly property bool supportOperationBusy: methodsBusy([
@@ -377,6 +378,7 @@ QtObject {
     case 'onboarding.complete':
     case 'preferences.set':
     case 'profiles.save':
+    case 'profiles.duplicate':
     case 'profiles.delete':
     case 'excluded_locations.set':
     case 'recents.record':
@@ -461,6 +463,7 @@ QtObject {
     case 'onboarding.complete':
     case 'preferences.set':
     case 'profiles.save':
+    case 'profiles.duplicate':
     case 'profiles.delete':
     case 'excluded_locations.set':
     case 'recents.record':
@@ -529,7 +532,7 @@ QtObject {
   }
 
   function send(method, params) {
-    if (!agentSocket.connected) {
+    if (!ipcBridge.running) {
       lastError = 'Agent socket is not connected'
       lastErrorCode = 'agent_disconnected'
       lastErrorDetails = null
@@ -563,8 +566,7 @@ QtObject {
     }
 
     trackRequest(id, method)
-    agentSocket.write(frame)
-    agentSocket.flush()
+    ipcBridge.write(frame)
     return id
   }
 
@@ -638,7 +640,7 @@ QtObject {
   function activateBackend() {
     backendDemanded = true
     demandAgent(true)
-    if (agentSocket.connected && !backendActivationRequested) {
+    if (ipcBridge.running && !backendActivationRequested) {
       backendActivationRequested = true
       send('account.get', {})
     }
@@ -657,7 +659,7 @@ QtObject {
   }
 
   function maybeRunQueuedAction() {
-    if (!queuedAgentAction || !agentSocket.connected) return
+    if (!queuedAgentAction || !ipcBridge.running) return
     if (accountStatus === 'signed_out' || accountStatus === 'two_factor_required' ||
         accountStatus === 'error') {
       queuedAgentAction = ''
@@ -790,6 +792,13 @@ QtObject {
 
   function saveProfile(profile) {
     return send('profiles.save', { profile: profile || {} })
+  }
+
+  function duplicateProfile(id, name) {
+    return send('profiles.duplicate', {
+      id: String(id || ''),
+      name: String(name || '')
+    })
   }
 
   function deleteProfile(id) {
@@ -992,7 +1001,7 @@ QtObject {
   }
 
   function quickConnect() {
-    if (!agentSocket.connected || accountStatus === 'unknown' ||
+    if (!ipcBridge.running || accountStatus === 'unknown' ||
         (signedIn && !connectionObservationKnown)) {
       queueAgentAction('quick-connect')
       return
@@ -1015,7 +1024,7 @@ QtObject {
   }
 
   function disconnect() {
-    if (!agentSocket.connected || accountStatus === 'unknown' ||
+    if (!ipcBridge.running || accountStatus === 'unknown' ||
         (signedIn && !connectionObservationKnown)) {
       queueAgentAction('disconnect')
       return
@@ -1093,12 +1102,6 @@ QtObject {
                    'Split tunneling is unavailable on the current Proton backend.')
       return
     }
-    if (killSwitch) {
-      deferFeature('split_tunneling_kill_switch_conflict',
-                   'Turn Kill Switch off before enabling Split Tunneling.')
-      return
-    }
-
     if (!splitTunneling && splitStandardApps.length === 0) {
       deferFeature('split_tunneling_empty_selection',
                    'Configure at least one excluded app first.')
@@ -1315,7 +1318,9 @@ QtObject {
       } else if (message.result && completedMethod === 'account.upgrade_url') {
         if (message.result.url) openTrustedUrl(String(message.result.url))
       }
-      else if (completedMethod === 'profiles.save' || completedMethod === 'profiles.delete')
+      else if (completedMethod === 'profiles.save' ||
+               completedMethod === 'profiles.duplicate' ||
+               completedMethod === 'profiles.delete')
         loadProfiles(0)
       else if (completedMethod === 'recents.record' || completedMethod === 'recents.pin' ||
                completedMethod === 'recents.delete')
@@ -1372,6 +1377,8 @@ QtObject {
     serverIp = connection.server_ip || ''
     protocol = protocolName(connection.protocol)
     connectionErrorCode = String(connection.error_code || '')
+    networkConflicts = Array.isArray(connection.network_conflicts)
+      ? connection.network_conflicts : []
     restrictionReasonCode = Number(connection.restriction_reason_code || 0)
     latencyMs = Number(connection.latency_ms || 0)
 
@@ -1560,48 +1567,48 @@ QtObject {
     }
   }
 
-  property Socket agentSocket: Socket {
-    id: agentSocket
-    path: root.socketPath
-    connected: false
+  // Quickshell 0.3 SplitParser has no pre-delimiter size limit. The bundled
+  // Rust bridge validates each direction before stdout reaches SplitParser,
+  // so a local peer cannot make the shell accumulate an unbounded line.
+  property Process ipcBridge: Process {
+    id: ipcBridge
+    command: ['/usr/bin/proton-omarchy-agent', '--ipc-bridge']
+    running: false
+    stdinEnabled: true
 
-    parser: SplitParser {
+    stdout: SplitParser {
       splitMarker: '\n'
       onRead: data => root.handleLine(data)
     }
 
-    onConnectedChanged: {
-      if (connected) {
-        root.socketRetryTimer.stop()
-        root.socketRetryAttempt = 0
-        if (root.lastErrorCode === 'agent_socket_error' ||
-            root.lastErrorCode === 'agent_disconnected') {
-          root.lastError = ''
-          root.lastErrorCode = ''
-          root.lastErrorDetails = null
-          root.lastErrorRetryable = false
-        }
-        root.hello()
-        if (root.backendDemanded) root.activateBackend()
+    onStarted: {
+      root.socketRetryTimer.stop()
+      root.socketRetryAttempt = 0
+      if (root.lastErrorCode === 'agent_socket_error' ||
+          root.lastErrorCode === 'agent_disconnected') {
+        root.lastError = ''
+        root.lastErrorCode = ''
+        root.lastErrorDetails = null
+        root.lastErrorRetryable = false
       }
-      else {
-        if (root.pendingCount > 0)
-          root.clearPendingRequests(
-            'agent_disconnected',
-            'Proton VPN agent connection was lost'
-          )
-        root.markAgentUnavailable()
-        root.backendActivationRequested = false
-        root.scheduleSocketRetry()
-      }
+      root.hello()
+      if (root.backendDemanded) root.activateBackend()
     }
 
-    onError: error => {
+    onExited: function(exitCode) {
+      if (root.pendingCount > 0)
+        root.clearPendingRequests(
+          'agent_disconnected',
+          'Proton VPN agent connection was lost'
+        )
       root.markAgentUnavailable()
-      root.lastError = 'Unable to reach the Proton VPN agent'
-      root.lastErrorCode = 'agent_socket_error'
-      root.lastErrorDetails = { socket_error: Number(error) }
-      root.lastErrorRetryable = true
+      root.backendActivationRequested = false
+      if (root.socketDemandActive()) {
+        root.lastError = 'Unable to reach the Proton VPN agent'
+        root.lastErrorCode = 'agent_socket_error'
+        root.lastErrorDetails = { bridge_exit: Number(exitCode) }
+        root.lastErrorRetryable = true
+      }
       root.scheduleSocketRetry()
     }
   }

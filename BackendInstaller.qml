@@ -1,10 +1,9 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
 
 // First-run bridge between an unprivileged Omarchy plugin checkout and the
 // signed Arch backend package. Privileged work remains in the auditable helper;
-// this object only supervises it and exposes durable progress to the panel.
+// this object only supervises it and exposes bounded progress to the panel.
 QtObject {
   id: root
 
@@ -21,9 +20,6 @@ QtObject {
   property string diagnostic: ''
   property int pendingExitCode: 0
 
-  readonly property string runtimeDir: Quickshell.env('XDG_RUNTIME_DIR')
-  readonly property string statusPath: runtimeDir
-    ? runtimeDir + '/proton-vpn-omarchy-installer.json' : ''
   readonly property string scriptPath: localFilePath(
     Qt.resolvedUrl('scripts/install-backend'))
   readonly property bool running: installProcess.running
@@ -139,24 +135,18 @@ QtObject {
     id: installProcess
     running: false
     command: []
+    stdout: SplitParser {
+      splitMarker: '\n'
+      onRead: data => root.applyStatus(data)
+    }
     stderr: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.diagnostic = String(text || '').trim().substring(0, 1000)
     }
     onExited: function(exitCode) {
       root.pendingExitCode = Number(exitCode)
-      if (root.statusPath) statusFile.reload()
       root.resultTimer.restart()
     }
-  }
-
-  property FileView statusFile: FileView {
-    id: statusFile
-    path: root.statusPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.applyStatus(text())
-    onFileChanged: reload()
   }
 
   property Timer resultTimer: Timer {

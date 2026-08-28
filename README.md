@@ -44,9 +44,12 @@ omarchy plugin add https://github.com/48hoursnonstop/proton-vpn-omarchy.git --en
 
 Open the Proton VPN bar icon and choose **Install backend**. The first-run
 installer pins the project's OpenPGP fingerprint, verifies the downloaded
-package signature in an isolated keyring, and only then asks Polkit to install
-the package. It configures and starts the per-user agent automatically. No
-`curl | bash` or root shell is used.
+package's exact byte size and SHA-256, verifies its GitHub/Sigstore build
+provenance against the pinned release workflow, tag and commit, verifies the
+detached signature in an isolated keyring, and checks the exact package
+identity. Only then does it ask Polkit to install the package. It configures
+and starts the per-user agent automatically. No `curl | bash` or root shell is
+used.
 
 Omarchy warns before enabling third-party plugins because they execute inside
 the shell process. Review the source in this repository before confirming.
@@ -56,13 +59,18 @@ the shell process. Review the source in this repository before confirming.
 If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
-curl -fL -o proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.detached-sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/RELEASE-SIGNING-KEY.asc
+curl -fL --proto '=https' --max-filesize 4276945 -o proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.8/proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst
+curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.8/proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.sig
+curl -fL --proto '=https' --max-filesize 11490 -o proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.8/proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.intoto.jsonl
+curl -fL --proto '=https' --max-filesize 880 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.8/RELEASE-SIGNING-KEY.asc
+printf '%s  %s\n' ac5079c455611a01aace5e3d6f2dfb87c20d4fe07c0b0b9a3f199193ec68a65b proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst | sha256sum -c -
+printf '%s  %s\n' 3573fe3e96cd1ba703b7ad3bcc666b0f502387f634fe3c42d15f8ab9782e21bb proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
+printf '%s  %s\n' 07fa728b15c75e1627e75f9141189792e88445d3be1914a4fd5b08f2f0e1db4e proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
+gh attestation verify proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.8.8 --source-digest 4b4c807486d58a74e785d50ec089d1cb72b89690 --deny-self-hosted-runners
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.detached-sig proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
-sudo pacman -U ./proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst
+sudo pacman -U ./proton-vpn-omarchy-0.8.8-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
 
@@ -92,9 +100,10 @@ release. Verify the fingerprint before trusting a newly downloaded copy.
 - SRP login, TOTP, security keys, SSO and Human Verification handoff
 - Smart, ProTun UDP/TCP/Stealth and OpenVPN UDP/TCP
 - countries, cities, servers, Secure Core, P2P, Tor and gateways
-- profiles, recents, favorites, default connection and Connect and Go
-- Kill Switch, NetShield, VPN Accelerator, NAT and port forwarding
+- profiles, explicit duplication, recents, favorites, default connection and Connect and Go
+- Kill Switch (including split-tunneling coexistence), NetShield, VPN Accelerator, NAT and port forwarding
 - app and IPv4/IPv6 CIDR split tunneling, LAN and local-DNS policies
+- automatic warnings for conflicting VPNs and tunnel interfaces
 - Spanish and English UI with native Omarchy layout and Proton mobile icons
 
 ## Support and reporting
@@ -118,6 +127,8 @@ OpenVPN engine; it does not ship a tunnel implementation.
 - x86-64 Linux with cgroup v2 and eBPF support
 - NetworkManager
 - curl, GnuPG and a working Polkit agent (included by Omarchy)
+- GitHub CLI for offline bundle verification; the guided installer obtains the
+  Arch-signed `github-cli` package when it is not already installed
 
 ## Remove
 
@@ -136,6 +147,6 @@ directories so reinstalling does not silently erase them.
 
 The release contains the backend's corresponding source archive and Arch build
 recipe; the same code is browsable in the
-[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.8.1).
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.8.8).
 Project code is licensed under GPL-3.0-or-later; individual upstream assets
 retain their original notices. See [NOTICE.md](NOTICE.md).

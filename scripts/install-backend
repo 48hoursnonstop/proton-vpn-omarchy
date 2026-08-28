@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH='/usr/bin'
 
 readonly PACKAGE_NAME='proton-vpn-omarchy'
-readonly TARGET_VERSION='0.8.1-1'
+readonly TARGET_VERSION='0.8.8-1'
 readonly PACKAGE_FILE="${PACKAGE_NAME}-${TARGET_VERSION}-x86_64.pkg.tar.zst"
-readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1'
+readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.8'
 readonly RELEASE_FINGERPRINT='4D0124DE09788D29E3A8798B12BE3422BDA2422C'
+readonly SOURCE_REF='refs/tags/v0.8.8'
+readonly SOURCE_COMMIT='4b4c807486d58a74e785d50ec089d1cb72b89690'
+readonly PACKAGE_BYTES=4276945
+readonly PACKAGE_SHA256='ac5079c455611a01aace5e3d6f2dfb87c20d4fe07c0b0b9a3f199193ec68a65b'
+readonly SIGNATURE_BYTES=119
+readonly SIGNATURE_SHA256='3573fe3e96cd1ba703b7ad3bcc666b0f502387f634fe3c42d15f8ab9782e21bb'
+readonly ATTESTATION_FILE="${PACKAGE_FILE}.intoto.jsonl"
+readonly ATTESTATION_BYTES=11490
+readonly ATTESTATION_SHA256='07fa728b15c75e1627e75f9141189792e88445d3be1914a4fd5b08f2f0e1db4e'
+readonly SIGNER_WORKFLOW='48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml'
 
 mode="${1:---install}"
 case "$mode" in
@@ -27,7 +38,6 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 plugin_dir="$(dirname -- "$script_dir")"
 public_key="$plugin_dir/RELEASE-SIGNING-KEY.asc"
 runtime_dir="${XDG_RUNTIME_DIR:-}"
-status_file=''
 work_dir=''
 progress=0
 error_code='unexpected_error'
@@ -36,13 +46,8 @@ write_status() {
   local state="$1"
   local value="$2"
   local code="${3:-}"
-  local temporary="${status_file}.tmp.$$"
-
-  [[ -n $status_file ]] || return 0
   printf '{"version":1,"state":"%s","progress":%d,"code":"%s"}\n' \
-    "$state" "$value" "$code" >"$temporary"
-  chmod 0600 "$temporary"
-  mv -f -- "$temporary" "$status_file"
+    "$state" "$value" "$code"
 }
 
 set_stage() {
@@ -55,6 +60,40 @@ fail() {
   shift
   printf 'proton-vpn-omarchy-installer: %s\n' "$*" >&2
   exit 1
+}
+
+download_exact() {
+  local url="$1"
+  local destination="$2"
+  local expected_bytes="$3"
+  local expected_sha256="$4"
+  local download_error="$5"
+  local label="$6"
+  local file_blocks
+  local actual_bytes
+  local actual_sha256
+
+  (( expected_bytes > 0 )) && [[ $expected_sha256 =~ ^[0-9a-f]{64}$ ]] ||
+    fail release_metadata_invalid "Pinned $label release metadata is incomplete."
+  file_blocks=$(((expected_bytes + 511) / 512))
+  if ! (
+    ulimit -f "$file_blocks"
+    exec curl --fail --location --silent --show-error --remove-on-error \
+      --proto '=https' --proto-redir '=https' --tlsv1.2 \
+      --retry 3 --retry-all-errors --connect-timeout 15 --max-time 300 \
+      --max-filesize "$expected_bytes" --output "$destination" "$url"
+  ); then
+    fail "$download_error" "The $label could not be downloaded within its pinned size limit."
+  fi
+  [[ -f $destination && ! -L $destination ]] ||
+    fail "$download_error" "The downloaded $label is not a regular file."
+  actual_bytes="$(stat -c '%s' -- "$destination")"
+  [[ $actual_bytes == "$expected_bytes" ]] ||
+    fail release_size_mismatch "The $label does not have its pinned size."
+  actual_sha256="$(sha256sum -- "$destination")"
+  actual_sha256="${actual_sha256%% *}"
+  [[ $actual_sha256 == "$expected_sha256" ]] ||
+    fail release_digest_mismatch "The $label does not match its pinned SHA-256 digest."
 }
 
 cleanup() {
@@ -75,13 +114,14 @@ on_exit() {
 trap on_exit EXIT
 
 [[ ${EUID:-$(id -u)} -ne 0 ]] || fail run_as_user 'Run the installer as the desktop user, not root.'
-[[ -n $runtime_dir && $runtime_dir == /* && -d $runtime_dir && -O $runtime_dir ]] ||
+[[ -n $runtime_dir && $runtime_dir == /* && -d $runtime_dir && ! -L $runtime_dir &&
+   -O $runtime_dir ]] ||
   fail runtime_unavailable 'XDG_RUNTIME_DIR is unavailable or is not owned by this user.'
 
 umask 077
-status_file="$runtime_dir/proton-vpn-omarchy-installer.json"
-lock_file="$runtime_dir/proton-vpn-omarchy-installer.lock"
-exec 9>"$lock_file"
+# Lock the already-validated runtime-directory inode. No predictable lock file
+# is opened, followed, truncated or left stale after a crash.
+exec 9<"$runtime_dir"
 flock -n 9 || fail already_running 'Another backend installation is already running.'
 
 set_stage 5 preflight
@@ -90,10 +130,20 @@ set_stage 5 preflight
 [[ $(uname -m) == x86_64 ]] || fail unsupported_architecture 'This release requires x86-64.'
 [[ -r $public_key ]] || fail signing_key_missing 'The embedded release signing key is missing.'
 
-for command_name in curl gpg pacman pkexec systemctl vercmp omarchy; do
+for command_name in curl flock gpg pacman pkexec sha256sum stat systemctl vercmp; do
   command -v "$command_name" >/dev/null 2>&1 ||
     fail missing_requirement "Required command is unavailable: $command_name"
 done
+
+if [[ ! -x /usr/bin/gh ]]; then
+  set_stage 10 installing_verifier
+  if ! pkexec /usr/bin/pacman --noconfirm --needed -S github-cli \
+       >/dev/null 2>&1; then
+    fail verifier_install_failed 'The Arch-signed GitHub attestation verifier could not be installed.'
+  fi
+fi
+[[ -x /usr/bin/gh ]] ||
+  fail verifier_unavailable 'GitHub artifact attestation verification is unavailable.'
 
 installed_version="$(pacman -Q "$PACKAGE_NAME" 2>/dev/null | awk '{ print $2 }' || true)"
 if [[ $mode == --install && -n $installed_version ]] &&
@@ -101,10 +151,11 @@ if [[ $mode == --install && -n $installed_version ]] &&
   set_stage 85 configuring
   [[ -x /usr/bin/proton-omarchy-setup ]] ||
     fail setup_missing 'The installed package does not contain proton-omarchy-setup.'
-  /usr/bin/proton-omarchy-setup backend ||
+  /usr/bin/proton-omarchy-setup backend >/dev/null 2>&1 ||
     fail backend_configuration_failed 'The backend user services could not be configured.'
-  systemctl --user reset-failed proton-omarchy-agent.service proton-omarchy-agent.socket || true
-  systemctl --user start proton-omarchy-agent.socket ||
+  systemctl --user reset-failed proton-omarchy-agent.service \
+    proton-omarchy-agent.socket >/dev/null 2>&1 || true
+  systemctl --user start proton-omarchy-agent.socket >/dev/null 2>&1 ||
     fail backend_start_failed 'The backend user socket could not be started.'
   set_stage 100 complete
   exit 0
@@ -125,30 +176,40 @@ primary_count="$(
 work_dir="$(mktemp -d "$runtime_dir/proton-vpn-omarchy-install.XXXXXX")"
 package_path="$work_dir/$PACKAGE_FILE"
 signature_path="$work_dir/release-signature.sig"
+attestation_path="$work_dir/$ATTESTATION_FILE"
 verification_home="$work_dir/gnupg"
 verification_status="$work_dir/gpg-status"
 
 set_stage 25 downloading_package
-if ! curl --fail --location --silent --show-error \
-  --proto '=https' --tlsv1.2 --retry 3 --retry-all-errors \
-  --connect-timeout 15 --max-time 300 \
-  --output "$package_path" "$RELEASE_BASE/$PACKAGE_FILE"; then
-  fail package_download_failed 'The signed backend package could not be downloaded.'
-fi
+download_exact "$RELEASE_BASE/$PACKAGE_FILE" "$package_path" \
+  "$PACKAGE_BYTES" "$PACKAGE_SHA256" package_download_failed 'backend package'
 
 set_stage 45 downloading_signature
-if ! curl --fail --location --silent --show-error \
-  --proto '=https' --tlsv1.2 --retry 3 --retry-all-errors \
-  --connect-timeout 15 --max-time 60 \
-  --output "$signature_path" "$RELEASE_BASE/$PACKAGE_FILE.sig"; then
-  fail signature_download_failed 'The package signature could not be downloaded.'
+download_exact "$RELEASE_BASE/$PACKAGE_FILE.sig" "$signature_path" \
+  "$SIGNATURE_BYTES" "$SIGNATURE_SHA256" signature_download_failed 'package signature'
+
+set_stage 55 downloading_attestation
+download_exact "$RELEASE_BASE/$ATTESTATION_FILE" "$attestation_path" \
+  "$ATTESTATION_BYTES" "$ATTESTATION_SHA256" attestation_download_failed \
+  'build-provenance bundle'
+
+set_stage 60 verifying_provenance
+mkdir -m 0700 "$work_dir/gh"
+if ! GH_CONFIG_DIR="$work_dir/gh" /usr/bin/gh attestation verify "$package_path" \
+     --bundle "$attestation_path" \
+     --repo 48hoursnonstop/proton-vpn-omarchy-core \
+     --signer-workflow "$SIGNER_WORKFLOW" \
+     --source-ref "$SOURCE_REF" \
+     --source-digest "$SOURCE_COMMIT" \
+     --deny-self-hosted-runners >/dev/null 2>&1; then
+  fail provenance_invalid 'The package is not bound to the pinned release workflow and source tag.'
 fi
 
 mkdir -m 0700 "$verification_home"
 GNUPGHOME="$verification_home" gpg --batch --quiet --import "$public_key" ||
   fail signing_key_import_failed 'The pinned signing key could not be imported.'
 
-set_stage 65 verifying_package
+set_stage 68 verifying_package
 if ! GNUPGHOME="$verification_home" gpg --batch --status-fd 1 \
      --verify "$signature_path" "$package_path" >"$verification_status" 2>/dev/null; then
   fail signature_invalid 'The downloaded package signature is invalid.'
@@ -171,7 +232,7 @@ fi
 
 set_stage 72 awaiting_authorization
 set +e
-pkexec /usr/bin/pacman --noconfirm -U "$package_path"
+pkexec /usr/bin/pacman --noconfirm -U "$package_path" >/dev/null 2>&1
 install_result=$?
 set -e
 case "$install_result" in
@@ -189,15 +250,16 @@ installed_version="$(pacman -Q "$PACKAGE_NAME" 2>/dev/null | awk '{ print $2 }' 
 [[ -x /usr/bin/proton-omarchy-setup ]] ||
   fail setup_missing 'The installed package does not contain proton-omarchy-setup.'
 
-/usr/bin/proton-omarchy-setup backend ||
+/usr/bin/proton-omarchy-setup backend >/dev/null 2>&1 ||
   fail backend_configuration_failed 'The backend user services could not be configured.'
 set_stage 96 starting_backend
-systemctl --user reset-failed proton-omarchy-agent.service proton-omarchy-agent.socket || true
+systemctl --user reset-failed proton-omarchy-agent.service \
+  proton-omarchy-agent.socket >/dev/null 2>&1 || true
 if systemctl --user is-active proton-omarchy-agent.service >/dev/null 2>&1; then
-  systemctl --user restart proton-omarchy-agent.service ||
+  systemctl --user restart proton-omarchy-agent.service >/dev/null 2>&1 ||
     fail backend_start_failed 'The backend user service could not be restarted.'
 fi
-systemctl --user start proton-omarchy-agent.socket ||
+systemctl --user start proton-omarchy-agent.socket >/dev/null 2>&1 ||
   fail backend_start_failed 'The backend user socket could not be started.'
 
 set_stage 100 complete

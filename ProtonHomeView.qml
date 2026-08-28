@@ -133,6 +133,18 @@ Item {
     }
 
     Text {
+      visible: root.vpnState && root.vpnState.connecting &&
+        root.vpnState.networkConflicts.length > 0
+      width: parent.width
+      text: root.strings.networkConflictWarning(root.vpnState.networkConflicts)
+      color: root.urgent
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
+      wrapMode: Text.WordWrap
+      horizontalAlignment: Text.AlignHCenter
+    }
+
+    Text {
       visible: root.vpnState && !root.vpnState.operationBusy &&
         root.vpnState.lastError !== '' &&
         root.vpnState.lastErrorRetryable

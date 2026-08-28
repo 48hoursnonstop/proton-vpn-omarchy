@@ -46,6 +46,7 @@ Item {
   property string connectAndGoAppName: ''
   property string deleteCandidateId: ''
   property string saveRequestId: ''
+  property string duplicateRequestId: ''
   property string deleteRequestId: ''
   readonly property bool subpageActive: editing || pickerVisible
 
@@ -321,6 +322,10 @@ Item {
     function onRequestFinished(requestId, method, ok, errorCode) {
       if (requestId === root.saveRequestId) {
         root.saveRequestId = ''
+        if (ok) root.editing = false
+      }
+      if (requestId === root.duplicateRequestId) {
+        root.duplicateRequestId = ''
         if (ok) root.editing = false
       }
       if (requestId === root.deleteRequestId) {
@@ -706,6 +711,25 @@ Item {
         onClicked: root.vpnState.setDefaultConnection({
           type: 'profile', profileId: root.editingId
         })
+      }
+
+      PanelActionRow {
+        visible: root.editingId.length > 0
+        width: parent.width
+        rowForeground: root.foreground
+        rowFontFamily: root.fontFamily
+        iconName: 'file_lines'
+        title: root.label('duplicate_profile')
+        subtitle: root.label('duplicate_profile_description')
+        enabled: root.duplicateRequestId.length === 0 &&
+          !(root.vpnState && root.vpnState.storeOperationBusy)
+        busy: root.duplicateRequestId.length > 0
+        onActivated: {
+          root.duplicateRequestId = root.vpnState.duplicateProfile(
+            root.editingId,
+            root.strings.profileCopyName(nameField.text.trim())
+          )
+        }
       }
     }
 
