@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+shell_root="${OMARCHY_SHELL_ROOT:-/usr/share/omarchy/shell}"
+omarchy_root="${OMARCHY_PATH:-/usr/share/omarchy}"
+output_dir="${1:-$root/docs/screenshots}"
+qpa_platform="${PROTON_SHOWCASE_QPA_PLATFORM:-wayland}"
+host_runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+only_route="${PROTON_SHOWCASE_ONLY:-}"
+capture_count=0
+
+command -v quickshell >/dev/null 2>&1 || {
+  printf 'SHOWCASE: quickshell is unavailable\n' >&2
+  exit 2
+}
+command -v omarchy-theme-set-templates >/dev/null 2>&1 || {
+  printf 'SHOWCASE: Omarchy theme renderer is unavailable\n' >&2
+  exit 2
+}
+[[ -d $shell_root/Commons && -d $shell_root/Ui ]] || {
+  printf 'SHOWCASE: Omarchy QML imports are unavailable\n' >&2
+  exit 2
+}
+
+work="$(mktemp -d /tmp/proton-showcase.XXXXXX)"
+cleanup() {
+  rm -rf -- "$work"
+}
+trap cleanup EXIT
+
+qml_root="$work/qml"
+mkdir -p "$qml_root" "$output_dir"
+cp "$root"/*.qml "$qml_root/"
+cp -a "$root/components" "$root/assets" "$qml_root/"
+cp "$root/tests/qml/showcase/ShowcaseState.qml" "$qml_root/"
+cp "$root/tests/qml/showcase/shell.qml" "$qml_root/shell.qml"
+ln -s "$shell_root/Commons" "$qml_root/Commons"
+ln -s "$shell_root/Ui" "$qml_root/Ui"
+
+prepare_theme() {
+  local slug="$1" capture_home="$2"
+  local source_theme="$omarchy_root/themes/$slug"
+  local next_theme="$capture_home/.local/state/omarchy/current/next-theme"
+  local current_theme="$capture_home/.local/state/omarchy/current/theme"
+
+  [[ -f $source_theme/colors.toml ]] || {
+    printf 'SHOWCASE: theme not found: %s\n' "$slug" >&2
+    return 2
+  }
+  mkdir -p "$next_theme" "$capture_home/.config/omarchy"
+  cp -a "$source_theme/." "$next_theme/"
+  env HOME="$capture_home" OMARCHY_PATH="$omarchy_root" \
+    omarchy-theme-set-templates
+  mv "$next_theme" "$current_theme"
+}
+
+capture() {
+  local route="$1" theme="$2" filename="$3"
+  local capture_home="$work/home-$theme"
+  local isolated_runtime="$work/runtime-$theme-$route"
+  local runtime_dir="$host_runtime"
+  local destination="$output_dir/$filename"
+  local output result
+
+  if [[ -n $only_route && $route != "$only_route" ]]; then
+    return
+  fi
+
+  if [[ ! -d $capture_home/.local/state/omarchy/current/theme ]]; then
+    prepare_theme "$theme" "$capture_home"
+  fi
+  if [[ $qpa_platform == offscreen ]]; then
+    runtime_dir="$isolated_runtime"
+    mkdir -m 700 "$runtime_dir"
+  fi
+
+  set +e
+  output="$(
+    env HOME="$capture_home" \
+      XDG_CONFIG_HOME="$capture_home/.config" \
+      XDG_RUNTIME_DIR="$runtime_dir" \
+      QT_QPA_PLATFORM="$qpa_platform" \
+      PROTON_SHOWCASE_ROUTE="$route" \
+      PROTON_SHOWCASE_OUTPUT="$destination" \
+      quickshell --no-color -p "$qml_root" 2>&1
+  )"
+  result=$?
+  set -e
+  if (( result != 0 )); then
+    printf '%s\n' "$output" >&2
+    printf 'SHOWCASE: %s/%s exited %d\n' "$theme" "$route" "$result" >&2
+    exit 1
+  fi
+  if [[ ! -s $destination ]] ||
+     ! grep -Fq "SHOWCASE_CAPTURE $route true" <<<"$output"; then
+    printf '%s\n' "$output" >&2
+    printf 'SHOWCASE: %s/%s did not produce a capture\n' "$theme" "$route" >&2
+    exit 1
+  fi
+  if grep -Eiq \
+    'ReferenceError|TypeError|Cannot assign|Unable to assign|is not a type|Binding loop|failed to load' \
+    <<<"$output"; then
+    printf '%s\n' "$output" >&2
+    printf 'SHOWCASE: QML error in %s/%s\n' "$theme" "$route" >&2
+    exit 1
+  fi
+  capture_count=$((capture_count + 1))
+  printf 'SHOWCASE: %-13s %-13s %s\n' "$theme" "$route" "$destination"
+}
+
+# Home demonstrates native theme inheritance; all other views use one neutral
+# publication theme. Their state always comes from ShowcaseState.qml.
+capture home vantablack home-vantablack.png
+capture home tokyo-night home-tokyo-night.png
+capture home flexoki-light home-flexoki-light.png
+capture locations catppuccin countries-catppuccin.png
+capture profiles catppuccin profiles-catppuccin.png
+capture details catppuccin connection-details-catppuccin.png
+capture settings catppuccin settings-catppuccin.png
+
+printf 'SHOWCASE: PASS (%d sanitized production-UI captures)\n' "$capture_count"

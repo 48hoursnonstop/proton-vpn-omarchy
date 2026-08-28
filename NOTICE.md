@@ -15,4 +15,9 @@ The backend integrates with the separately installed official Proton ProTun
 NetworkManager service. ProTun itself is not redistributed in this repository
 or release package.
 
+The project's shared Rust runtime, IPC protocol, split-tunneling service and
+packaging source are published separately at
+https://github.com/48hoursnonstop/proton-vpn-omarchy-core so the plugin remains
+lightweight.
+
 All original project code is distributed under GPL-3.0-or-later. See LICENSE.

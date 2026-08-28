@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "proton.omarchy",
   "name": "Proton VPN",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "author": "Proton VPN for Omarchy contributors",
   "license": "GPL-3.0-or-later",
   "description": "Native Proton VPN status and controls for Omarchy Quattro.",

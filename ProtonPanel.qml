@@ -236,7 +236,7 @@ Panel {
   }
 
   function cursorItem(index) {
-    return index === 0 ? heroBlock : detailsRow
+    return index === 0 ? homeView.heroItem : homeView.detailsItem
   }
 
   function scrollCursorIntoView() {
@@ -383,7 +383,7 @@ Panel {
             : panelRoot.authVisible
               ? authView.implicitHeight
             : panelRoot.route === 'home'
-              ? homeColumn.implicitHeight : routeColumn.implicitHeight
+              ? homeView.implicitHeight : routeColumn.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
@@ -426,162 +426,21 @@ Panel {
           fontFamily: panelRoot.fontFamily
         }
 
-        Column {
-          id: homeColumn
+        ProtonHomeView {
+          id: homeView
           visible: !panelRoot.inputViewVisible && panelRoot.route === 'home'
           enabled: visible
           width: panelFlick.width
-          spacing: Style.space(10)
-
-          Item {
-            id: heroBlock
-            width: parent.width
-            implicitHeight: hero.implicitHeight
-            readonly property bool ringVisible:
-              panelRoot.cursorActive && panelRoot.cursorIndex === 0
-
-            PanelHero {
-              id: hero
-              width: parent.width
-              title: panelRoot.vpnState && panelRoot.vpnState.connected
-                ? (panelRoot.vpnState.countryName || panelRoot.vpnState.countryCode)
-                : 'Proton VPN'
-              meta: !panelRoot.vpnState || !panelRoot.vpnState.agentAvailable
-                ? strings.text('agent_unavailable')
-                : !panelRoot.vpnState.backendReady
-                  ? strings.text('backend_unavailable')
-                  : !panelRoot.vpnState.signedIn
-                    ? strings.text('sign_in_title')
-                    : panelRoot.vpnState.connecting
-                      ? strings.text('connecting_to') + ' ' +
-                        (panelRoot.vpnState.countryName || panelRoot.vpnState.countryCode ||
-                         strings.text('fastest_server').toLowerCase()) + '…'
-                      : panelRoot.vpnState.connected
-                        ? panelRoot.vpnState.serverName
-                        : strings.text('vpn_disconnected')
-              foreground: panelRoot.foreground
-              fontFamily: panelRoot.fontFamily
-              iconOpacity: panelRoot.vpnState && panelRoot.vpnState.connected ? 1.0 : 0.58
-
-              iconComponent: Component {
-                ProtonVpnMark {
-                  iconSize: Style.font.display
-                  statusColor: panelRoot.vpnState && panelRoot.vpnState.connected
-                    ? Color.accent
-                    : panelRoot.vpnState && panelRoot.vpnState.connecting
-                      ? panelRoot.foreground : panelRoot.dim
-                  state: !panelRoot.vpnState || panelRoot.vpnState.status === 'unknown'
-                    ? 'information'
-                    : panelRoot.vpnState.connected
-                      ? 'connected'
-                      : panelRoot.vpnState.connecting
-                        ? 'connecting' : 'disconnected'
-                }
-              }
-
-              trailingControl: Component {
-                ToggleSwitch {
-                  id: connectionSwitch
-                  checked: panelRoot.vpnState ? panelRoot.vpnState.connected : false
-                  busy: panelRoot.vpnState ? panelRoot.vpnState.tunnelOperationBusy : false
-                  hasCursor: heroBlock.ringVisible
-                  foreground: hero.foreground
-                  onHovered: function(on) { if (on) panelRoot.setCursor(0) }
-                  onToggled: if (panelRoot.vpnState) panelRoot.vpnState.toggleConnection()
-
-                  PanelToolTip {
-                    visible: connectionSwitch.containsMouse
-                    text: panelRoot.vpnState &&
-                      (panelRoot.vpnState.connected || panelRoot.vpnState.connecting)
-                        ? strings.text('disconnect_proton_vpn')
-                        : strings.text('quick_connect')
-                    fontFamily: hero.fontFamily
-                  }
-                }
-              }
-            }
-          }
-
-          Text {
-            visible: panelRoot.vpnState &&
-              (panelRoot.vpnState.operationBusy || panelRoot.vpnState.lastError !== '')
-            width: parent.width
-            text: !panelRoot.vpnState
-              ? ''
-              : panelRoot.vpnState.operationBusy
-                ? strings.operationStage(panelRoot.vpnState.operationStage)
-                : strings.error(
-                    panelRoot.vpnState.lastErrorCode,
-                    panelRoot.vpnState.lastError)
-            color: panelRoot.vpnState && panelRoot.vpnState.operationBusy
-              ? panelRoot.dim : panelRoot.urgent
-            font.family: panelRoot.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            wrapMode: Text.WordWrap
-            horizontalAlignment: Text.AlignHCenter
-          }
-
-          Text {
-            visible: panelRoot.vpnState && panelRoot.vpnState.connected
-            width: parent.width
-            text: panelRoot.vpnState
-              ? panelRoot.vpnState.protocolName(panelRoot.vpnState.protocol) +
-                '  ·  ' + panelRoot.vpnState.countryCode : ''
-            color: panelRoot.dim
-            font.family: panelRoot.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            horizontalAlignment: Text.AlignHCenter
-          }
-
-          Text {
-            visible: panelRoot.vpnState && !panelRoot.vpnState.operationBusy &&
-              panelRoot.vpnState.lastError !== '' &&
-              panelRoot.vpnState.lastErrorRetryable
-            width: parent.width
-            text: strings.text('retryable_hint')
-            color: panelRoot.dim
-            font.family: panelRoot.fontFamily
-            font.pixelSize: Style.font.caption
-            horizontalAlignment: Text.AlignHCenter
-          }
-
-          PanelActionRow {
-            id: detailsRow
-            width: parent.width
-            rowForeground: panelRoot.foreground
-            rowFontFamily: panelRoot.fontFamily
-            iconName: 'arrow_down_arrow_up'
-            title: strings.text('connection_details')
-            subtitle: strings.text('connection_details_description')
-            detailIconName: 'chevron_right'
-            hasKeyboardCursor: panelRoot.cursorActive && panelRoot.cursorIndex === 1
-            onHovered: panelRoot.setCursor(1)
-            onActivated: panelRoot.pushRoute('details')
-          }
-
-          PanelSeparator { foreground: panelRoot.foreground }
-
-          ProtonRecentsView {
-            id: homeRecents
-            width: parent.width
-            vpnState: panelRoot.vpnState
-            strings: panelRoot.stringTable
-            foreground: panelRoot.foreground
-            urgent: panelRoot.urgent
-            dim: panelRoot.dim
-            fontFamily: panelRoot.fontFamily
-          }
-
-          Text {
-            width: parent.width
-            topPadding: Style.space(4)
-            text: strings.text('official_core_note')
-            color: panelRoot.dim
-            font.family: panelRoot.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-            horizontalAlignment: Text.AlignHCenter
-          }
+          vpnState: panelRoot.vpnState
+          strings: panelRoot.stringTable
+          foreground: panelRoot.foreground
+          urgent: panelRoot.urgent
+          dim: panelRoot.dim
+          fontFamily: panelRoot.fontFamily
+          cursorIndex: panelRoot.cursorIndex
+          cursorActive: panelRoot.cursorActive
+          onCursorRequested: function(index) { panelRoot.setCursor(index) }
+          onDetailsRequested: panelRoot.pushRoute('details')
         }
 
         Column {

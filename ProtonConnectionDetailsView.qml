@@ -36,25 +36,6 @@ Item {
     function onConnectedChanged() { Qt.callLater(root.markFeedbackViewed) }
   }
 
-  function bytes(value) {
-    var amount = Number(value || 0)
-    if (amount >= 1024 * 1024 * 1024)
-      return (amount / (1024 * 1024 * 1024)).toFixed(1) + ' GiB'
-    if (amount >= 1024 * 1024)
-      return (amount / (1024 * 1024)).toFixed(1) + ' MiB'
-    if (amount >= 1024)
-      return (amount / 1024).toFixed(1) + ' KiB'
-    return Math.round(amount) + ' B'
-  }
-
-  Timer {
-    interval: 1000
-    repeat: true
-    triggeredOnStart: true
-    running: root.visible && root.vpnState && root.vpnState.connected
-    onTriggered: root.vpnState.refreshTraffic()
-  }
-
   Timer {
     interval: 20000
     repeat: true
@@ -147,30 +128,13 @@ Item {
 
       PanelSeparator { foreground: root.foreground }
 
-      PanelSectionHeader {
-        text: root.label('traffic').toUpperCase()
+      ProtonTrafficCard {
+        width: parent.width
+        vpnState: root.vpnState
+        strings: root.strings
         foreground: root.foreground
+        dim: root.dim
         fontFamily: root.fontFamily
-      }
-
-      PanelActionRow {
-        width: parent.width
-        rowForeground: root.foreground
-        rowFontFamily: root.fontFamily
-        iconName: 'arrow_down'
-        title: root.label('download')
-        subtitle: root.bytes(root.vpnState.downloadBytes) + ' · ' +
-          root.bytes(root.vpnState.downloadBytesPerSecond) + '/s'
-      }
-
-      PanelActionRow {
-        width: parent.width
-        rowForeground: root.foreground
-        rowFontFamily: root.fontFamily
-        iconName: 'arrow_up'
-        title: root.label('upload')
-        subtitle: root.bytes(root.vpnState.uploadBytes) + ' · ' +
-          root.bytes(root.vpnState.uploadBytesPerSecond) + '/s'
       }
 
       PanelActionRow {

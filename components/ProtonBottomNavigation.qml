@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
+import '.' as ProtonComponents
 
 // Android's root destination model expressed with Quattro controls and tokens.
 // This component owns layout only; colors, type, spacing and interaction paint
@@ -61,7 +62,7 @@ Item {
             width: parent.width - Style.space(6)
             spacing: Style.space(2)
 
-            ProtonMobileNavIcon {
+            ProtonComponents.ProtonMobileNavIcon {
               anchors.horizontalCenter: parent.horizontalCenter
               iconName: String(parent.parent.modelData.icon || '')
               selected: parent.parent.selectedRoute

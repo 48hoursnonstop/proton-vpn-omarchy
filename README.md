@@ -8,6 +8,32 @@ system service.
 This is an independent community project and is not affiliated with or
 endorsed by Proton AG.
 
+The product is intentionally split at its IPC boundary: this repository holds
+the lightweight Omarchy frontend, installer and publication assets; the shared
+Rust agent, protocol, Rust/eBPF service and reproducible Arch packaging live in
+[proton-vpn-omarchy-core](https://github.com/48hoursnonstop/proton-vpn-omarchy-core).
+Proton's official ProTun service remains an external dependency and is not
+redistributed by either repository.
+
+## Screenshots
+
+The same production Home view inherits each Omarchy theme without a separate
+plugin skin:
+
+| Vantablack | Tokyo Night | Flexoki Light |
+| --- | --- | --- |
+| ![Home in Vantablack](docs/screenshots/home-vantablack.png) | ![Home in Tokyo Night](docs/screenshots/home-tokyo-night.png) | ![Home in Flexoki Light](docs/screenshots/home-flexoki-light.png) |
+
+| Countries | Profiles |
+| --- | --- |
+| ![Country browser](docs/screenshots/countries-catppuccin.png) | ![Connection profiles](docs/screenshots/profiles-catppuccin.png) |
+| Connection details | Settings |
+| ![Connection details and live traffic](docs/screenshots/connection-details-catppuccin.png) | ![VPN settings](docs/screenshots/settings-catppuccin.png) |
+
+All screenshots are rendered in English from the production QML components
+with deterministic documentation data. No user account, IP address, setting,
+recent connection or profile is read for publication captures.
+
 ## Install
 
 Add and enable the plugin with Omarchy:
@@ -108,5 +134,7 @@ directories so reinstalling does not silently erase them.
 ## Source and license
 
 The release contains the backend's corresponding source archive and Arch build
-recipe. Project code is licensed under GPL-3.0-or-later; individual upstream
-assets retain their original notices. See [NOTICE.md](NOTICE.md).
+recipe; the same code is browsable in the
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.8.0).
+Project code is licensed under GPL-3.0-or-later; individual upstream assets
+retain their original notices. See [NOTICE.md](NOTICE.md).

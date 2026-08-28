@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
+import '.' as ProtonComponents
 
 // Quattro button surface with Proton mobile icon content. It replaces Unicode
 // glyph buttons whose metrics varied by font and display scale.
@@ -47,7 +48,7 @@ Item {
     anchors.centerIn: parent
     spacing: root.label === '' ? 0 : Style.space(4)
 
-    ProtonMobileIcon {
+    ProtonComponents.ProtonMobileIcon {
       Layout.alignment: Qt.AlignVCenter
       iconName: root.iconName
       sourceOverride: root.iconSource

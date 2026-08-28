@@ -187,7 +187,6 @@ QtObject {
   property var pendingPostConnectActions: ({})
   property var queuedPostConnectAction: null
   property int pendingCount: 0
-  property string localPendingMethod: ''
   property string lastResponseMethod: ''
   property var activeOperations: []
   property var recentOperations: []
@@ -195,13 +194,14 @@ QtObject {
 
   readonly property var ownActiveOperation: operationForClient()
   readonly property var foregroundOperation: ownActiveOperation ||
-    (activeOperations.length > 0 ? activeOperations[0] : null)
+    firstForegroundOperation()
+  readonly property string foregroundPendingMethod: firstForegroundPendingMethod()
   readonly property bool operationBusy: foregroundOperation !== null ||
-    localPendingMethod.length > 0
+    foregroundPendingMethod.length > 0
   readonly property string operationStage: foregroundOperation && foregroundOperation.stage
-    ? String(foregroundOperation.stage) : localStageForMethod(localPendingMethod)
+    ? String(foregroundOperation.stage) : localStageForMethod(foregroundPendingMethod)
   readonly property string operationKind: foregroundOperation && foregroundOperation.kind
-    ? String(foregroundOperation.kind) : localPendingMethod
+    ? String(foregroundOperation.kind) : foregroundPendingMethod
   readonly property bool operationCancelable: foregroundOperation
     ? !!foregroundOperation.cancelable
     : operationKind === 'connection.connect' || operationKind === 'connection.resolve'
@@ -245,6 +245,7 @@ QtObject {
   signal actionRequested(string action)
   signal requestStarted(string requestId, string method)
   signal requestFinished(string requestId, string method, bool ok, string errorCode)
+  signal trafficUpdated()
 
   function applyLifecycleCache(raw) {
     var parsed = null
@@ -325,10 +326,69 @@ QtObject {
     var instanceId = serverClientInstanceId || clientInstanceId
     for (var index = 0; index < activeOperations.length; ++index) {
       var operation = activeOperations[index]
-      if (operation && operation.initiator_client_instance_id === instanceId)
+      if (operation && operation.initiator_client_instance_id === instanceId &&
+          isForegroundMethod(operation.kind))
         return operation
     }
     return null
+  }
+
+  function firstForegroundOperation() {
+    for (var index = 0; index < activeOperations.length; ++index) {
+      var operation = activeOperations[index]
+      if (operation && isForegroundMethod(operation.kind)) return operation
+    }
+    return null
+  }
+
+  function firstForegroundPendingMethod() {
+    var keys = Object.keys(pendingRequests)
+    for (var index = 0; index < keys.length; ++index) {
+      var pending = pendingRequests[keys[index]] || {}
+      var method = String(pending.method || '')
+      if (isForegroundMethod(method)) return method
+    }
+    return ''
+  }
+
+  // Only user mutations and tunnel transitions occupy the global feedback
+  // row. Polling and page-specific reads retain their local loading states so
+  // traffic/NetShield refreshes cannot resize the panel once per interval.
+  function isForegroundMethod(method) {
+    switch (String(method || '')) {
+    case 'account.login':
+    case 'account.submit_2fa':
+    case 'account.authenticate_fido2':
+    case 'account.submit_fido2_pin':
+    case 'account.cancel_fido2':
+    case 'account.logout':
+    case 'connection.resolve':
+    case 'connection.connect':
+    case 'connection.cancel':
+    case 'connection.disconnect':
+    case 'feature.set':
+    case 'protocol.set':
+    case 'dns.set':
+    case 'split_tunneling.set':
+    case 'onboarding.complete':
+    case 'preferences.set':
+    case 'profiles.save':
+    case 'profiles.delete':
+    case 'excluded_locations.set':
+    case 'recents.record':
+    case 'recents.pin':
+    case 'recents.delete':
+    case 'default_connection.set':
+    case 'report_issue.submit':
+      return true
+    default:
+      return false
+    }
+  }
+
+  function isSilentBackgroundMethod(method) {
+    var value = String(method || '')
+    return value === 'traffic.get' || value === 'netshield.stats.get'
   }
 
   function requestPending(method) {
@@ -418,7 +478,6 @@ QtObject {
     }
     pendingRequests = next
     pendingCount = Object.keys(next).length
-    localPendingMethod = String(method)
     requestStarted(id, String(method))
     syncSocketDemand()
   }
@@ -435,8 +494,6 @@ QtObject {
     pendingRequests = next
     var remaining = Object.keys(next)
     pendingCount = remaining.length
-    localPendingMethod = remaining.length > 0
-      ? String(next[remaining[0]].method || '') : ''
     var method = completed ? String(completed.method || '') : ''
     lastResponseMethod = method
     requestFinished(key, method, !!ok, String(errorCode || ''))
@@ -461,7 +518,6 @@ QtObject {
     queuedPostConnectAction = null
     postConnectTimer.stop()
     pendingCount = 0
-    localPendingMethod = ''
     if (code) lastErrorCode = String(code)
     if (message) lastError = String(message)
     lastErrorDetails = null
@@ -570,7 +626,7 @@ QtObject {
   function hello() {
     send('hello', {
       client: 'plugin',
-      client_version: '0.8.1',
+      client_version: '0.8.2',
       client_instance_id: clientInstanceId
     })
   }
@@ -1120,15 +1176,23 @@ QtObject {
         }
         if (completedMethod === 'connection.observe')
           connectionObservationRequested = false
-        lastError = responseError.message
-          ? String(responseError.message)
-          : 'Agent request failed'
-        lastErrorCode = String(responseError.code || 'request_failed')
-        lastErrorDetails = responseError.details || null
-        lastErrorRetryable = !!responseError.retryable
+        // High-frequency telemetry has no global feedback surface. Preserve
+        // the last user-action result when one of those background polls
+        // fails; other read failures remain visible and actionable.
+        if (!isSilentBackgroundMethod(completedMethod)) {
+          lastError = responseError.message
+            ? String(responseError.message)
+            : 'Agent request failed'
+          lastErrorCode = String(responseError.code || 'request_failed')
+          lastErrorDetails = responseError.details || null
+          lastErrorRetryable = !!responseError.retryable
+        }
         return
       }
-      if (completedMethod && completedMethod !== 'hello' && completedMethod !== 'state.get') {
+      // Passive refreshes must not erase feedback from the last user action.
+      // In particular, the one-second traffic poll should never make a
+      // connection/authentication error disappear from the panel.
+      if (isForegroundMethod(completedMethod)) {
         lastError = ''
         lastErrorCode = ''
         lastErrorDetails = null
@@ -1201,6 +1265,7 @@ QtObject {
         uploadBytes = Number(message.result.upload_bytes || 0)
         downloadBytesPerSecond = Number(message.result.download_bytes_per_second || 0)
         uploadBytesPerSecond = Number(message.result.upload_bytes_per_second || 0)
+        trafficUpdated()
       } else if (message.result && completedMethod === 'feature.set' &&
                  message.result.reconnect_required) {
         lastError = 'Reconnect the VPN to apply this setting.'
