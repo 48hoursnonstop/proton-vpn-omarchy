@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Per-user Rust agent adapter. The Rust agent owns shared state while the
 // official Proton Linux core owns every VPN and protection mutation.
@@ -88,6 +89,8 @@ QtObject {
   property var diagnosticsSources: []
   property var diagnosticsFailures: []
   property bool diagnosticsRawContentsExposed: false
+  property string diagnosticsSummary: ''
+  property bool diagnosticsCopied: false
   readonly property bool reportCategoriesLoading: requestPending('report_issue.categories.get')
   readonly property bool diagnosticsLoading: requestPending('diagnostics.get')
   property int serverTotal: 0
@@ -181,6 +184,7 @@ QtObject {
   property int nextRequestId: 1
   readonly property string clientInstanceId: 'plugin-' + Date.now() + '-' +
     Math.floor(Math.random() * 0x100000000).toString(16)
+  readonly property string clientVersion: '0.8.3'
   property string serverClientInstanceId: ''
   property var pendingRequests: ({})
   property var pendingConnectionRecents: ({})
@@ -626,7 +630,7 @@ QtObject {
   function hello() {
     send('hello', {
       client: 'plugin',
-      client_version: '0.8.2',
+      client_version: clientVersion,
       client_instance_id: clientInstanceId
     })
   }
@@ -712,6 +716,7 @@ QtObject {
       'https://proton.me',
       'https://account.proton.me',
       'https://account.protonvpn.com',
+      'https://github.com/48hoursnonstop/proton-vpn-omarchy',
       'https://github.com/ProtonVPN',
       'https://www.gnu.org'
     ]
@@ -728,6 +733,23 @@ QtObject {
 
   function openAccountManagement() {
     return openTrustedUrl('https://account.protonvpn.com/')
+  }
+
+  function openCommunityIssue() {
+    return openTrustedUrl(
+      'https://github.com/48hoursnonstop/proton-vpn-omarchy/issues/new/choose'
+    )
+  }
+
+  function copyDiagnostics() {
+    var text = String(diagnosticsSummary || '').trim()
+    if (text.length === 0) return false
+    text = 'Frontend: ' + clientVersion + '\n' + text
+    Quickshell.execDetached([
+      'bash', '-c', 'printf %s ' + Util.shellQuote(text) + ' | wl-copy'
+    ])
+    diagnosticsCopied = true
+    return true
   }
 
   function openUpgrade() {
@@ -955,6 +977,7 @@ QtObject {
   }
 
   function loadDiagnostics() {
+    diagnosticsCopied = false
     return send('diagnostics.get', {})
   }
 
@@ -964,7 +987,7 @@ QtObject {
       category: String(category || ''),
       email: String(email || ''),
       fields: fields || {},
-      include_logs: includeLogs !== false
+      include_logs: includeLogs === true
     })
   }
 
@@ -1288,6 +1311,7 @@ QtObject {
         diagnosticsFailures = Array.isArray(message.result.failures)
           ? message.result.failures : []
         diagnosticsRawContentsExposed = !!message.result.raw_contents_exposed
+        diagnosticsSummary = String(message.result.summary || '')
       } else if (message.result && completedMethod === 'account.upgrade_url') {
         if (message.result.url) openTrustedUrl(String(message.result.url))
       }

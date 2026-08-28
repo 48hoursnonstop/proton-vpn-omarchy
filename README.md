@@ -56,28 +56,18 @@ the shell process. Review the source in this repository before confirming.
 If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst.sig
-curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy/releases/download/v0.8.0/RELEASE-SIGNING-KEY.asc
+curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
+curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig
+curl -fLO https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.8.1/RELEASE-SIGNING-KEY.asc
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
-sudo pacman -U ./proton-vpn-omarchy-0.8.0-3-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
+sudo pacman -U ./proton-vpn-omarchy-0.8.1-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
 
-### Package-managed alternative
-
-The Arch package also contains the same plugin frontend. To use that copy
-instead of a Git-managed checkout, install the verified package manually and
-run:
-
-```bash
-proton-omarchy-setup install
-```
-
-Do not install both frontend copies. The backend package is required in either
-case.
+The package is backend-only. Omarchy owns the frontend checkout, so backend
+updates can never install or downgrade a second copy of the UI.
 
 ## Update
 
@@ -89,7 +79,7 @@ omarchy plugin update proton.omarchy
 
 When that frontend requires a newer backend, opening the plugin offers the same
 signed update flow. Backend updates are also available as `.pkg.tar.zst`
-assets under GitHub Releases for manual installation.
+assets in the core repository's GitHub Releases for manual installation.
 
 Release packages and checksum manifests are signed with the project's
 dedicated OpenPGP key. Its primary fingerprint is
@@ -106,6 +96,17 @@ release. Verify the fingerprint before trusting a newly downloaded copy.
 - Kill Switch, NetShield, VPN Accelerator, NAT and port forwarding
 - app and IPv4/IPv6 CIDR split tunneling, LAN and local-DNS policies
 - Spanish and English UI with native Omarchy layout and Proton mobile icons
+
+## Support and reporting
+
+Plugin/core bugs belong in this repository's GitHub issue form. The Support
+page can copy a sanitized summary that excludes account names, IP addresses,
+connection IDs and raw journals.
+
+The separate official report form sends directly to Proton AG and says so
+before submission. Account name, entered email, country/ISP and the typed
+description are included; recent journals are opt-in and disabled by default.
+Never paste credentials or tokens into either flow.
 
 Only protocols actually advertised by installed NetworkManager backends are
 shown. The package uses Proton's official ProTun service and NetworkManager
@@ -135,6 +136,6 @@ directories so reinstalling does not silently erase them.
 
 The release contains the backend's corresponding source archive and Arch build
 recipe; the same code is browsable in the
-[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.8.0).
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.8.1).
 Project code is licensed under GPL-3.0-or-later; individual upstream assets
 retain their original notices. See [NOTICE.md](NOTICE.md).

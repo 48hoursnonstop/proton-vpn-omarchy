@@ -15,7 +15,8 @@ Item {
   property string fontFamily: Style.font.family
   property int categoryIndex: -1
   property var fieldValues: ({})
-  property bool includeLogs: true
+  property bool includeLogs: false
+  property bool confirmingOfficialReport: false
 
   readonly property var category: vpnState && categoryIndex >= 0 &&
     categoryIndex < vpnState.reportCategories.length
@@ -27,6 +28,7 @@ Item {
   function chooseCategory(index) {
     categoryIndex = index
     fieldValues = ({})
+    confirmingOfficialReport = false
     if (vpnState) vpnState.reportSubmitted = false
   }
 
@@ -37,6 +39,7 @@ Item {
       next[keys[index]] = fieldValues[keys[index]]
     next[String(key || '')] = String(value || '')
     fieldValues = next
+    confirmingOfficialReport = false
   }
 
   function fieldsValid() {
@@ -52,17 +55,21 @@ Item {
   }
 
   function submit() {
-    if (!fieldsValid()) return
+    if (!fieldsValid() || !confirmingOfficialReport) return
     vpnState.submitReport(
       String(category.submit_label || category.label || ''),
       emailField.text.trim(), fieldValues, includeLogs
     )
   }
 
-  onVisibleChanged: if (visible && vpnState && vpnState.reportIssueSupported)
-    vpnState.loadReportCategories()
-  Component.onCompleted: if (visible && vpnState && vpnState.reportIssueSupported)
-    vpnState.loadReportCategories()
+  function loadSupportData() {
+    if (!vpnState) return
+    if (vpnState.reportIssueSupported) vpnState.loadReportCategories()
+    vpnState.loadDiagnostics()
+  }
+
+  onVisibleChanged: if (visible) loadSupportData()
+  Component.onCompleted: if (visible) loadSupportData()
 
   Column {
     id: content
@@ -76,6 +83,35 @@ Item {
       font.family: root.fontFamily
       font.pixelSize: Style.font.heading
       font.weight: Font.DemiBold
+    }
+
+    PanelSectionHeader {
+      text: root.label('community_support').toUpperCase()
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+    }
+
+    PanelActionRow {
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      iconName: 'bug'
+      title: root.label('report_community_issue')
+      subtitle: root.label('report_community_issue_description')
+      detailIconName: 'arrow_out_square'
+      onActivated: if (root.vpnState) root.vpnState.openCommunityIssue()
+    }
+
+    PanelActionRow {
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      iconName: 'code'
+      title: root.vpnState && root.vpnState.diagnosticsCopied
+        ? root.label('diagnostics_copied') : root.label('copy_diagnostics')
+      subtitle: root.label('copy_diagnostics_description')
+      enabled: root.vpnState && root.vpnState.diagnosticsSummary.length > 0
+      onActivated: root.vpnState.copyDiagnostics()
     }
 
     PanelActionRow {
@@ -98,11 +134,21 @@ Item {
     Text {
       visible: root.vpnState && root.vpnState.reportIssueSupported
       width: parent.width
-      text: root.label('report_issue')
+      text: root.label('official_proton_report')
       color: root.foreground
       font.family: root.fontFamily
       font.pixelSize: Style.font.body
       font.weight: Font.DemiBold
+    }
+
+    Text {
+      visible: root.vpnState && root.vpnState.reportIssueSupported
+      width: parent.width
+      text: root.label('official_proton_report_disclosure')
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
+      wrapMode: Text.WordWrap
     }
 
     ListView {
@@ -139,7 +185,10 @@ Item {
         label: root.label('categories')
         foreground: root.foreground
         fontFamily: root.fontFamily
-        onClicked: root.categoryIndex = -1
+        onClicked: {
+          root.categoryIndex = -1
+          root.confirmingOfficialReport = false
+        }
       }
 
       Text {
@@ -177,6 +226,7 @@ Item {
         accent: Color.accent
         font.family: root.fontFamily
         inputMethodHints: Qt.ImhEmailCharactersOnly
+        onTextChanged: root.confirmingOfficialReport = false
       }
 
       Repeater {
@@ -216,19 +266,65 @@ Item {
         subtitle: root.label('include_logs_description')
         toggleVisible: true
         checked: root.includeLogs
-        onActivated: root.includeLogs = !root.includeLogs
+        onActivated: {
+          root.includeLogs = !root.includeLogs
+          root.confirmingOfficialReport = false
+        }
       }
 
       Button {
+        visible: !root.confirmingOfficialReport
         width: parent.width
-        text: root.label('send_report')
+        text: root.label('review_official_report')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: true
         active: true
         enabled: root.fieldsValid() &&
           !(root.vpnState && root.vpnState.operationBusy)
-        onClicked: root.submit()
+        onClicked: root.confirmingOfficialReport = true
+      }
+
+      Column {
+        visible: root.confirmingOfficialReport
+        width: parent.width
+        spacing: Style.space(5)
+
+        Text {
+          width: parent.width
+          text: root.label('confirm_official_report')
+          color: root.urgent
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+          wrapMode: Text.WordWrap
+          horizontalAlignment: Text.AlignHCenter
+        }
+
+        Row {
+          width: parent.width
+          spacing: Style.space(4)
+
+          Button {
+            width: (parent.width - parent.spacing) / 2
+            text: root.label('cancel')
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            bordered: true
+            onClicked: root.confirmingOfficialReport = false
+          }
+
+          Button {
+            width: (parent.width - parent.spacing) / 2
+            text: root.label('send_to_proton')
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            bordered: true
+            active: true
+            enabled: root.fieldsValid() &&
+              !(root.vpnState && root.vpnState.operationBusy)
+            onClicked: root.submit()
+          }
+        }
       }
     }
 
@@ -236,7 +332,7 @@ Item {
       visible: root.vpnState && root.vpnState.reportIssueSupported &&
         root.vpnState.reportSubmitted
       width: parent.width
-      text: root.label('report_sent')
+      text: root.label('official_report_sent')
       color: Color.accent
       font.family: root.fontFamily
       font.pixelSize: Style.font.body

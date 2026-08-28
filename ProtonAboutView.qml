@@ -44,7 +44,7 @@ Item {
       rowFontFamily: root.fontFamily
       iconName: 'brand_proton_vpn'
       title: root.label('version')
-      subtitle: '0.8.0'
+      subtitle: root.vpnState ? root.vpnState.clientVersion : '0.8.3'
     }
 
     PanelActionRow {
@@ -77,7 +77,7 @@ Item {
       title: root.label('source_code')
       detailIconName: 'arrow_out_square'
       onActivated: if (root.vpnState)
-        root.vpnState.openTrustedUrl('https://github.com/ProtonVPN')
+        root.vpnState.openTrustedUrl('https://github.com/48hoursnonstop/proton-vpn-omarchy')
     }
 
     PanelActionRow {

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Official Proton VPN support
+    url: https://protonvpn.com/support/contact
+    about: Use this for Proton account, subscription, or service issues that are not caused by this community client.
+  - name: Security vulnerability
+    url: https://github.com/48hoursnonstop/proton-vpn-omarchy/security/advisories/new
+    about: Report security problems privately; never disclose them in a public issue.

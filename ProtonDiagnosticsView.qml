@@ -59,6 +59,18 @@ Item {
       width: parent.width
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
+      iconName: 'code'
+      title: root.vpnState && root.vpnState.diagnosticsCopied
+        ? root.label('diagnostics_copied') : root.label('copy_diagnostics')
+      subtitle: root.label('copy_diagnostics_description')
+      enabled: root.vpnState && root.vpnState.diagnosticsSummary.length > 0
+      onActivated: root.vpnState.copyDiagnostics()
+    }
+
+    PanelActionRow {
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
       iconName: 'brand_proton_vpn'
       title: root.label('agent_status')
       subtitle: root.vpnState && root.vpnState.agentAvailable
