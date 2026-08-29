@@ -21,7 +21,7 @@ trap cleanup EXIT
 mkdir -m 700 "$test_root/runtime" "$test_root/config"
 
 cp "$root"/*.qml "$test_root/"
-cp -a "$root/components" "$root/assets" "$test_root/"
+cp -a "$root/components" "$root/assets" "$root/i18n" "$test_root/"
 cp "$root/tests/qml/traffic-shell.qml" "$test_root/shell.qml"
 ln -s "$shell_root/Commons" "$test_root/Commons"
 ln -s "$shell_root/Ui" "$test_root/Ui"

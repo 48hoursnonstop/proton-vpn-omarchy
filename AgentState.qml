@@ -122,6 +122,10 @@ QtObject {
   property string deviceIpAddress: ''
   property string deviceCountryCode: ''
   property string deviceIsp: ''
+  property bool networkSecurityKnown: false
+  property bool wifiConnected: false
+  property bool insecureWifi: false
+  property double networkSecurityGeneration: 0
 
   property string killSwitchMode: 'off'
   property int netShieldLevel: 0
@@ -185,7 +189,7 @@ QtObject {
   property int nextRequestId: 1
   readonly property string clientInstanceId: 'plugin-' + Date.now() + '-' +
     Math.floor(Math.random() * 0x100000000).toString(16)
-  readonly property string clientVersion: '0.8.5'
+  readonly property string clientVersion: '0.8.6'
   property string serverClientInstanceId: ''
   property var pendingRequests: ({})
   property var pendingConnectionRecents: ({})
@@ -880,6 +884,42 @@ QtObject {
     })
   }
 
+  function connectLocation(country, location, feature) {
+    if (!country || !location) return ''
+    var requestedFeature = ['secure_core', 'p2p', 'tor'].indexOf(feature) >= 0
+      ? feature : 'standard'
+    var state = String(location.state || '')
+    var city = String(location.city || '')
+    var entryCode = String(location.entryCountryCode || '')
+    var entryName = String(location.entryCountryName || entryCode)
+    var target = {
+      country_code: String(country.code || ''),
+      state: state,
+      city: city,
+      entry_country_code: entryCode
+    }
+    if (requestedFeature === 'p2p') target.p2p = true
+    else if (requestedFeature === 'tor') target.tor = true
+    else if (requestedFeature === 'secure_core') target.secure_core = true
+    var kind = requestedFeature === 'secure_core' ? 'secureCore'
+      : city ? 'city' : state ? 'state' : 'country'
+    var locationName = city || state || String(country.name || country.code || '')
+    return connectTarget(target, {
+      kind: kind,
+      header: locationName,
+      description: requestedFeature === 'secure_core' && entryName
+        ? entryName + ' → ' + String(country.name || country.code || '')
+        : 'Fastest server',
+      countryCode: String(country.code || ''),
+      countryName: String(country.name || ''),
+      entryCountryCode: entryCode,
+      entryCountryName: entryName,
+      state: state,
+      city: city,
+      feature: requestedFeature
+    })
+  }
+
   function connectServer(server) {
     if (!server) return ''
     var gateway = String(server.gateway_name || '')
@@ -1387,6 +1427,12 @@ QtObject {
     deviceIpAddress = String(device.ip_address || '')
     deviceCountryCode = String(device.country_code || '')
     deviceIsp = String(device.isp || '')
+
+    var networkSecurity = snapshot.network_security || {}
+    networkSecurityKnown = !!networkSecurity.known
+    wifiConnected = !!networkSecurity.wifi_connected
+    insecureWifi = !!networkSecurity.insecure_wifi
+    networkSecurityGeneration = Number(networkSecurity.generation || 0)
 
     var features = snapshot.features || {}
     killSwitchMode = features.kill_switch && features.kill_switch.mode

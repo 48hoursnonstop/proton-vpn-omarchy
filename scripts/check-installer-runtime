@@ -20,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 
 cp "$root"/*.qml "$test_root/"
-cp -a "$root/components" "$root/assets" "$root/scripts" "$test_root/"
+cp -a "$root/components" "$root/assets" "$root/i18n" "$root/scripts" "$test_root/"
 cp "$root/RELEASE-SIGNING-KEY.asc" "$test_root/"
 cp "$root/tests/qml/installer-shell.qml" "$test_root/shell.qml"
 ln -s "$shell_root/Commons" "$test_root/Commons"
@@ -38,7 +38,7 @@ if (( quickshell_status != 0 )); then
   exit 1
 fi
 result="$(printf '%s\n' "$output" | grep 'INSTALLER_QML' | tail -n 1)"
-[[ $result == *'INSTALLER_QML true true true true'* ]] || {
+[[ $result == *'INSTALLER_QML true true true true true true true true true true'* ]] || {
   printf '%s\n' "$output" >&2
   printf 'INSTALLER QML RUNTIME: unexpected result\n' >&2
   exit 1

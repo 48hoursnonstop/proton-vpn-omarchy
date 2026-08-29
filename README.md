@@ -99,12 +99,14 @@ release. Verify the fingerprint before trusting a newly downloaded copy.
 
 - SRP login, TOTP, security keys, SSO and Human Verification handoff
 - Smart, ProTun UDP/TCP/Stealth and OpenVPN UDP/TCP
-- countries, cities, servers, Secure Core, P2P, Tor and gateways
+- countries, states, cities, servers, Secure Core entry countries, P2P, Tor and gateways
 - profiles, explicit duplication, recents, favorites, default connection and Connect and Go
 - Kill Switch (including split-tunneling coexistence), NetShield, VPN Accelerator, NAT and port forwarding
 - app and IPv4/IPv6 CIDR split tunneling, LAN and local-DNS policies
-- automatic warnings for conflicting VPNs and tunnel interfaces
-- Spanish and English UI with native Omarchy layout and Proton mobile icons
+- automatic warnings for conflicting VPNs, tunnel interfaces and insecure Wi-Fi
+- suspend/resume reconnection and Windows-compatible random-country selection
+- Spanish and English catalogs with BCP 47 aliases, English fallback, placeholders,
+  plurals and validated extension points for additional languages
 
 ## Support and reporting
 

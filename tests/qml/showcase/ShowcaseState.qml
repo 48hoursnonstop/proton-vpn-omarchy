@@ -18,6 +18,10 @@ QtObject {
   property string serverIp: '198.51.100.42'
   property string deviceIpAddress: '203.0.113.24'
   property bool deviceLocationKnown: true
+  property bool networkSecurityKnown: true
+  property bool wifiConnected: true
+  property bool insecureWifi: false
+  property double networkSecurityGeneration: 1
   property string deviceIsp: 'Example Network'
   property string protocol: 'Stealth'
 

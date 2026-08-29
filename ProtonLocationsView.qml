@@ -30,6 +30,7 @@ Item {
     ? (vpnState ? vpnState.gateways : [])
     : (vpnState ? vpnState.countries : [])
   readonly property var filteredLocations: filterLocations()
+  readonly property var logicalTargets: buildLogicalTargets()
 
   implicitHeight: content.implicitHeight
 
@@ -47,6 +48,67 @@ Item {
       var haystack = String(item.name || item.code || '').toLowerCase()
       if (needle.length === 0 || haystack.indexOf(needle) >= 0)
         output.push(item)
+    }
+    return output
+  }
+
+  function buildLogicalTargets() {
+    if (!selectedLocation || selectedKind !== 'country') return []
+    var output = []
+    var needle = searchField.text.trim().toLowerCase()
+    if (feature === 'secure_core') {
+      var entries = Array.isArray(selectedLocation.secure_core_entries)
+        ? selectedLocation.secure_core_entries : []
+      for (var entryIndex = 0; entryIndex < entries.length; ++entryIndex) {
+        var entry = entries[entryIndex]
+        var entryName = String(entry.name || entry.code || '')
+        if (needle.length === 0 || entryName.toLowerCase().indexOf(needle) >= 0)
+          output.push({
+            kind: 'secureCore',
+            entryCountryCode: String(entry.code || ''),
+            entryCountryName: entryName,
+            title: label('via') + ' ' + entryName,
+            subtitle: label('fastest_secure_core')
+          })
+      }
+      return output
+    }
+    // Windows exposes State/City for Standard and P2P. The catalog keeps the
+    // two hierarchies separate so a location is never offered without an
+    // eligible server. Tor stays country/server only.
+    if (feature !== 'standard' && feature !== 'p2p') return output
+    var stateKey = feature === 'p2p' ? 'p2p_states' : 'states'
+    var cityKey = feature === 'p2p' ? 'p2p_cities' : 'cities'
+    var states = Array.isArray(selectedLocation[stateKey])
+      ? selectedLocation[stateKey] : []
+    for (var stateIndex = 0; stateIndex < states.length; ++stateIndex) {
+      var stateItem = states[stateIndex]
+      var stateName = String(stateItem.name || '')
+      if (needle.length === 0 || stateName.toLowerCase().indexOf(needle) >= 0)
+        output.push({
+          kind: 'state', state: stateName, city: '',
+          title: stateName, subtitle: label('fastest_in_state')
+        })
+      var stateCities = Array.isArray(stateItem.cities) ? stateItem.cities : []
+      for (var cityIndex = 0; cityIndex < stateCities.length; ++cityIndex) {
+        var stateCity = String(stateCities[cityIndex] || '')
+        var stateCitySearch = (stateCity + ' ' + stateName).toLowerCase()
+        if (needle.length === 0 || stateCitySearch.indexOf(needle) >= 0)
+          output.push({
+            kind: 'city', state: stateName, city: stateCity,
+            title: stateCity, subtitle: stateName
+          })
+      }
+    }
+    var cities = Array.isArray(selectedLocation[cityKey])
+      ? selectedLocation[cityKey] : []
+    for (var index = 0; index < cities.length; ++index) {
+      var cityName = String(cities[index] || '')
+      if (needle.length === 0 || cityName.toLowerCase().indexOf(needle) >= 0)
+        output.push({
+          kind: 'city', state: '', city: cityName,
+          title: cityName, subtitle: label('fastest_in_city')
+        })
     }
     return output
   }
@@ -155,6 +217,27 @@ Item {
       serverName: String(server.name || ''),
       gatewayName: gateway
     })
+  }
+
+  function chooseLogicalTarget(item) {
+    if (!item || !selectedLocation) return
+    var selection = {
+      // Profiles encode the feature in their target kind. Direct connections
+      // keep the hierarchy kind and record the feature in the recent entry.
+      targetKind: selectionMode && feature === 'p2p'
+        ? 'p2p' : String(item.kind || 'country'),
+      countryCode: String(selectedLocation.code || ''),
+      countryName: String(selectedLocation.name || ''),
+      entryCountryCode: String(item.entryCountryCode || ''),
+      entryCountryName: String(item.entryCountryName || ''),
+      state: String(item.state || ''),
+      city: String(item.city || '')
+    }
+    if (selectionMode) {
+      locationSelected(selection)
+      return
+    }
+    vpnState.connectLocation(selectedLocation, selection, feature)
   }
 
   onVisibleChanged: if (visible) refresh()
@@ -348,6 +431,35 @@ Item {
           modelData,
           root.section === 'countries' ? 'country' : 'gateway'
         )
+      }
+    }
+
+    ListView {
+      id: logicalTargetsList
+      visible: root.selectedLocation !== null && root.logicalTargets.length > 0
+      width: parent.width
+      height: Math.min(contentHeight, Style.space(250))
+      implicitHeight: height
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
+      model: root.logicalTargets
+      spacing: Style.space(2)
+
+      delegate: PanelActionRow {
+        required property var modelData
+        width: ListView.view.width
+        rowForeground: root.foreground
+        rowFontFamily: root.fontFamily
+        iconName: String(modelData.kind || '') === 'secureCore'
+          ? 'locks' : 'map_pin'
+        title: String(modelData.title || '')
+        subtitle: String(modelData.subtitle || '')
+        detailIconName: 'play'
+        enabled: root.selectionMode || !(root.vpnState &&
+          root.vpnState.tunnelOperationBusy)
+        busy: !root.selectionMode && root.vpnState &&
+          root.vpnState.tunnelOperationBusy
+        onActivated: root.chooseLogicalTarget(modelData)
       }
     }
 

@@ -69,33 +69,14 @@ Item {
         fontFamily: root.fontFamily
       }
 
-      RowLayout {
+      ProtonOptionPicker {
         width: parent.width
-        spacing: Style.space(8)
-
-        ProtonIconButton {
-          Layout.fillWidth: true
-          iconName: 'language'
-          label: 'Español'
-          foreground: root.foreground
-          fontFamily: root.fontFamily
-          bordered: true
-          active: root.selectedLocale === 'es-MX'
-          enabled: !root.storeBusy
-          onClicked: root.selectedLocale = 'es-MX'
-        }
-
-        ProtonIconButton {
-          Layout.fillWidth: true
-          iconName: 'language'
-          label: 'English'
-          foreground: root.foreground
-          fontFamily: root.fontFamily
-          bordered: true
-          active: root.selectedLocale === 'en'
-          enabled: !root.storeBusy
-          onClicked: root.selectedLocale = 'en'
-        }
+        options: root.strings ? root.strings.localeOptions() : []
+        currentValue: root.selectedLocale
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        busy: root.storeBusy
+        onSelected: function(value) { root.selectedLocale = String(value) }
       }
     }
 

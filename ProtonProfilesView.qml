@@ -27,6 +27,8 @@ Item {
   property string countryName: ''
   property string entryCountryCode: ''
   property string entryCountryName: ''
+  property string state: ''
+  property string city: ''
   property string serverName: ''
   property string gatewayName: ''
   property string pickerSection: 'countries'
@@ -92,6 +94,8 @@ Item {
     countryName = ''
     entryCountryCode = ''
     entryCountryName = ''
+    state = ''
+    city = ''
     serverName = ''
     gatewayName = ''
     profileProtocol = 'smart'
@@ -125,6 +129,8 @@ Item {
     countryName = String(profile.countryName || '')
     entryCountryCode = String(profile.entryCountryCode || '')
     entryCountryName = String(profile.entryCountryName || '')
+    state = String(profile.state || '')
+    city = String(profile.city || '')
     serverName = String(profile.serverName || '')
     gatewayName = String(profile.gatewayName || '')
     profileProtocol = profileProtocolValue(profile.profileProtocol || 'smart')
@@ -167,6 +173,8 @@ Item {
     countryName = String(selection.countryName || '')
     entryCountryCode = String(selection.entryCountryCode || '')
     entryCountryName = String(selection.entryCountryName || '')
+    state = String(selection.state || '')
+    city = String(selection.city || '')
     serverName = String(selection.serverName || '')
     gatewayName = String(selection.gatewayName || '')
     pickerVisible = false
@@ -179,18 +187,24 @@ Item {
       countryName: countryName,
       entryCountryCode: entryCountryCode,
       entryCountryName: entryCountryName,
+      state: state,
+      city: city,
       serverName: serverName,
       gatewayName: gatewayName
     }
     var kind = String(item.targetKind || 'fastest')
     var country = String(item.countryName || item.countryCode || '')
     var entry = String(item.entryCountryName || item.entryCountryCode || '')
+    var stateName = String(item.state || '')
+    var cityName = String(item.city || '')
     var server = String(item.serverName || '')
     var gateway = String(item.gatewayName || '')
     if (kind === 'gateway' || kind === 'gatewayServer')
       return gateway + (server ? ' · ' + server : '')
     if (kind === 'secureCore' && entry)
       return entry + ' → ' + (country || server)
+    if (cityName) return cityName + (stateName ? ' · ' + stateName : '')
+    if (stateName) return stateName
     if (server) return (country ? country + ' · ' : '') + server
     if (country) return country
     return label('target_' + kind)
@@ -280,6 +294,8 @@ Item {
     if (['fastest', 'p2p', 'secureCore', 'tor'].indexOf(targetKind) >= 0)
       return true
     if (targetKind === 'country') return countryCode.length > 0
+    if (targetKind === 'state') return countryCode.length > 0 && state.length > 0
+    if (targetKind === 'city') return countryCode.length > 0 && city.length > 0
     if (targetKind === 'server') return countryCode.length > 0 && serverName.length > 0
     if (targetKind === 'gateway') return gatewayName.length > 0
     if (targetKind === 'gatewayServer') return gatewayName.length > 0 &&
@@ -299,6 +315,8 @@ Item {
       countryName: countryName,
       entryCountryCode: entryCountryCode,
       entryCountryName: entryCountryName,
+      state: state,
+      city: city,
       serverName: serverName,
       gatewayName: gatewayName,
       profileProtocol: profileProtocol,

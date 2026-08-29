@@ -32,7 +32,7 @@ trap cleanup EXIT
 qml_root="$work/qml"
 mkdir -p "$qml_root" "$output_dir"
 cp "$root"/*.qml "$qml_root/"
-cp -a "$root/components" "$root/assets" "$qml_root/"
+cp -a "$root/components" "$root/assets" "$root/i18n" "$qml_root/"
 cp "$root/tests/qml/showcase/ShowcaseState.qml" "$qml_root/"
 cp "$root/tests/qml/showcase/shell.qml" "$qml_root/shell.qml"
 ln -s "$shell_root/Commons" "$qml_root/Commons"

@@ -18,6 +18,16 @@ ShellRoot {
     localeName: 'es-MX'
   }
 
+  ProtonStrings {
+    id: englishStrings
+    localeName: 'en-US'
+  }
+
+  ProtonStrings {
+    id: fallbackStrings
+    localeName: 'fr-FR'
+  }
+
   FloatingWindow {
     visible: true
     implicitWidth: 380
@@ -42,7 +52,13 @@ ShellRoot {
     onTriggered: {
       console.log('INSTALLER_QML', installer.packageKnown,
                   installer.canStart, installerView.implicitHeight > 0,
-                  installer.scriptPath.endsWith('/scripts/install-backend'))
+                  installer.scriptPath.endsWith('/scripts/install-backend'),
+                  strings.text('welcome_title') === 'Bienvenido a Proton VPN',
+                  englishStrings.text('welcome_title') === 'Welcome to Proton VPN',
+                  strings.localeOptions().length === 2,
+                  strings.profileCopyName('Test') === 'Copia de Test',
+                  strings.catalogsComplete,
+                  fallbackStrings.text('welcome_title') === 'Welcome to Proton VPN')
       Qt.quit()
     }
   }

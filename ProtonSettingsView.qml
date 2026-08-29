@@ -62,10 +62,7 @@ Item {
   }
 
   function languageOptions() {
-    return [
-      { value: 'es-MX', label: 'Español', iconName: 'language' },
-      { value: 'en', label: 'English', iconName: 'language' }
-    ]
+    return strings ? strings.localeOptions() : []
   }
 
   function saveDns() {
@@ -472,7 +469,8 @@ Item {
       rowFontFamily: root.fontFamily
       iconName: 'language'
       title: root.label('language')
-      subtitle: root.vpnState && root.vpnState.locale === 'es-MX' ? 'Español' : 'English'
+      subtitle: root.strings && root.vpnState
+        ? root.strings.languageName(root.vpnState.locale) : ''
       detailIconName: 'chevron_right'
       busy: root.storeBusy
       onActivated: root.togglePicker('language')

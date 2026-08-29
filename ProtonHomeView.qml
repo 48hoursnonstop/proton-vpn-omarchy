@@ -132,6 +132,23 @@ Item {
       horizontalAlignment: Text.AlignHCenter
     }
 
+    PanelActionRow {
+      visible: root.vpnState && root.vpnState.signedIn &&
+        root.vpnState.networkSecurityKnown && root.vpnState.wifiConnected &&
+        root.vpnState.insecureWifi && !root.vpnState.connected &&
+        !root.vpnState.connecting
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      iconName: 'exclamation_triangle_filled'
+      title: root.strings.text('insecure_wifi')
+      subtitle: root.strings.text('insecure_wifi_description')
+      detailIconName: 'play'
+      enabled: root.vpnState && !root.vpnState.tunnelOperationBusy
+      busy: root.vpnState && root.vpnState.tunnelOperationBusy
+      onActivated: if (root.vpnState) root.vpnState.quickConnect()
+    }
+
     Text {
       visible: root.vpnState && root.vpnState.connecting &&
         root.vpnState.networkConflicts.length > 0
