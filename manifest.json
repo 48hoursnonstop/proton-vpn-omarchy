@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "proton.omarchy",
   "name": "Proton VPN for Omarchy",
-  "version": "0.8.6",
+  "version": "0.9.0",
   "author": "Proton VPN for Omarchy contributors",
   "license": "GPL-3.0-or-later",
-  "description": "Near-Windows-complete Proton VPN client with native Omarchy UI, profiles, advanced split tunneling, and live traffic.",
+  "description": "Full-featured Proton VPN client with native Omarchy UI, profiles, advanced split tunneling, and live traffic.",
   "kinds": [
     "bar-widget"
   ],
