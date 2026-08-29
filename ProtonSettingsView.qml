@@ -525,6 +525,7 @@ Item {
     }
 
     PanelActionRow {
+      visible: root.vpnState && root.vpnState.anonymousCrashReportsWritable
       width: parent.width
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
