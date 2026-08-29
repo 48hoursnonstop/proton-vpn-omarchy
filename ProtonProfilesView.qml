@@ -21,6 +21,9 @@ Item {
   property bool iconPickerVisible: false
   property bool connectAndGoPickerVisible: false
   property bool connectAndGoAppPickerVisible: false
+  property bool customDnsPickerVisible: false
+  property bool lanPickerVisible: false
+  property bool localDnsPickerVisible: false
   property string editingId: ''
   property string targetKind: 'fastest'
   property string countryCode: ''
@@ -38,6 +41,10 @@ Item {
   property int netShieldLevel: 2
   property bool moderateNat: false
   property bool portForwardingEnabled: false
+  property string customDnsMode: 'inherit'
+  property string customDnsText: ''
+  property string lanMode: 'inherit'
+  property string localDnsMode: 'inherit'
   property string profileIconName: 'Speed'
   property string profileColor: '#C857E7'
   property string connectAndGoMode: 'off'
@@ -51,6 +58,10 @@ Item {
   property string duplicateRequestId: ''
   property string deleteRequestId: ''
   readonly property bool subpageActive: editing || pickerVisible
+  readonly property bool networkPoliciesSupported: vpnState &&
+    typeof vpnState.hasCapability === 'function' &&
+    vpnState.hasCapability('profiles.custom_dns') &&
+    vpnState.hasCapability('profiles.lan_policy')
 
   readonly property var profileColors: [
     '#0E7AD2', '#C857E7', '#4DC73D', '#C93333', '#F08C00', '#E2CC19'
@@ -87,6 +98,9 @@ Item {
     iconPickerVisible = false
     connectAndGoPickerVisible = false
     connectAndGoAppPickerVisible = false
+    customDnsPickerVisible = false
+    lanPickerVisible = false
+    localDnsPickerVisible = false
     editingId = ''
     nameField.text = ''
     targetKind = 'fastest'
@@ -103,6 +117,10 @@ Item {
     netShieldLevel = 2
     moderateNat = false
     portForwardingEnabled = false
+    customDnsMode = 'inherit'
+    customDnsText = ''
+    lanMode = 'inherit'
+    localDnsMode = 'inherit'
     profileIconName = 'Speed'
     profileColor = '#C857E7'
     connectAndGoMode = 'off'
@@ -122,6 +140,9 @@ Item {
     iconPickerVisible = false
     connectAndGoPickerVisible = false
     connectAndGoAppPickerVisible = false
+    customDnsPickerVisible = false
+    lanPickerVisible = false
+    localDnsPickerVisible = false
     editingId = String(profile.id || '')
     nameField.text = String(profile.name || '')
     targetKind = String(profile.targetKind || 'fastest')
@@ -139,6 +160,11 @@ Item {
       ? 2 : profile.profileNetShieldLevel)
     moderateNat = String(profile.profileNatType || '') === 'moderate'
     portForwardingEnabled = !!profile.profilePortForwardingEnabled
+    customDnsMode = String(profile.profileCustomDnsMode || 'inherit')
+    customDnsText = Array.isArray(profile.profileCustomDnsServers)
+      ? profile.profileCustomDnsServers.join(', ') : ''
+    lanMode = String(profile.profileLanMode || 'inherit')
+    localDnsMode = String(profile.profileLocalDnsMode || 'inherit')
     profileIconName = String(profile.iconName || 'Speed')
     profileColor = String(profile.color || '#C857E7')
     connectAndGoMode = profile.connectAndGoEnabled
@@ -282,6 +308,33 @@ Item {
     return false
   }
 
+  function customDnsServers() {
+    var parts = String(customDnsText || '').split(/[\s,;]+/)
+    var output = []
+    for (var index = 0; index < parts.length; ++index) {
+      var value = String(parts[index] || '').trim()
+      if (value.length > 0 && output.indexOf(value) < 0) output.push(value)
+    }
+    return output
+  }
+
+  function customDnsValid() {
+    return customDnsMode !== 'custom' ||
+      (customDnsServers().length > 0 && !netShieldEnabled)
+  }
+
+  function dnsModeLabel(mode) {
+    if (mode === 'custom') return label('custom_dns')
+    if (mode === 'off') return label('disabled')
+    return label('use_global_setting')
+  }
+
+  function policyModeLabel(mode) {
+    if (mode === 'allow') return label('allow')
+    if (mode === 'block') return label('block')
+    return label('use_global_setting')
+  }
+
   function selectConnectAndGoApp(app) {
     if (!app) return
     connectAndGoAppId = String(app.id || '')
@@ -324,6 +377,10 @@ Item {
       profileNetShieldLevel: netShieldLevel,
       profileNatType: moderateNat ? 'moderate' : 'strict',
       profilePortForwardingEnabled: portForwardingEnabled,
+      profileCustomDnsMode: customDnsMode,
+      profileCustomDnsServers: customDnsServers(),
+      profileLanMode: lanMode,
+      profileLocalDnsMode: localDnsMode,
       connectAndGoEnabled: connectAndGoMode !== 'off',
       connectAndGoMode: connectAndGoMode === 'off' ? 'website' : connectAndGoMode,
       connectAndGoUrl: connectAndGoUrl.trim(),
@@ -533,7 +590,11 @@ Item {
         subtitle: root.netShieldEnabled ? root.label('enabled') : root.label('disabled')
         toggleVisible: true
         checked: root.netShieldEnabled
-        onActivated: root.netShieldEnabled = !root.netShieldEnabled
+        onActivated: {
+          root.netShieldEnabled = !root.netShieldEnabled
+          if (root.netShieldEnabled && root.customDnsMode === 'custom')
+            root.customDnsMode = 'off'
+        }
       }
 
       PanelActionRow {
@@ -565,6 +626,116 @@ Item {
         onSelected: function(value) {
           root.netShieldLevel = value
           root.netShieldLevelPickerVisible = false
+        }
+      }
+
+      PanelActionRow {
+        visible: root.networkPoliciesSupported
+        width: parent.width
+        rowForeground: root.foreground
+        rowFontFamily: root.fontFamily
+        iconName: 'globe'
+        title: root.label('profile_custom_dns')
+        subtitle: root.dnsModeLabel(root.customDnsMode)
+        detailIconName: 'chevron_right'
+        onActivated: root.customDnsPickerVisible = !root.customDnsPickerVisible
+      }
+
+      ProtonOptionPicker {
+        visible: root.networkPoliciesSupported && root.customDnsPickerVisible
+        width: parent.width
+        options: [
+          { value: 'inherit', label: root.label('use_global_setting'), iconName: 'sliders' },
+          { value: 'off', label: root.label('disabled'), iconName: 'power_off' },
+          { value: 'custom', label: root.label('custom_dns'), iconName: 'globe' }
+        ]
+        currentValue: root.customDnsMode
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onSelected: function(value) {
+          root.customDnsMode = String(value)
+          if (root.customDnsMode === 'custom') root.netShieldEnabled = false
+          root.customDnsPickerVisible = false
+        }
+      }
+
+      TextField {
+        visible: root.networkPoliciesSupported && root.customDnsMode === 'custom'
+        width: parent.width
+        placeholderText: '1.1.1.1, 9.9.9.9'
+        text: root.customDnsText
+        foreground: root.foreground
+        accent: Color.accent
+        font.family: root.fontFamily
+        maximumLength: 512
+        onTextChanged: root.customDnsText = text
+      }
+
+      Text {
+        visible: root.networkPoliciesSupported && root.customDnsMode === 'custom'
+        width: parent.width
+        text: root.label('profile_custom_dns_description')
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        wrapMode: Text.WordWrap
+      }
+
+      PanelActionRow {
+        visible: root.networkPoliciesSupported
+        width: parent.width
+        rowForeground: root.foreground
+        rowFontFamily: root.fontFamily
+        iconName: 'squares_in_square'
+        title: root.label('profile_lan_policy')
+        subtitle: root.policyModeLabel(root.lanMode)
+        detailIconName: 'chevron_right'
+        onActivated: root.lanPickerVisible = !root.lanPickerVisible
+      }
+
+      ProtonOptionPicker {
+        visible: root.networkPoliciesSupported && root.lanPickerVisible
+        width: parent.width
+        options: [
+          { value: 'inherit', label: root.label('use_global_setting'), iconName: 'sliders' },
+          { value: 'allow', label: root.label('allow'), iconName: 'checkmark' },
+          { value: 'block', label: root.label('block'), iconName: 'shield' }
+        ]
+        currentValue: root.lanMode
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onSelected: function(value) {
+          root.lanMode = String(value)
+          root.lanPickerVisible = false
+        }
+      }
+
+      PanelActionRow {
+        visible: root.networkPoliciesSupported
+        width: parent.width
+        rowForeground: root.foreground
+        rowFontFamily: root.fontFamily
+        iconName: 'servers'
+        title: root.label('profile_local_dns_policy')
+        subtitle: root.policyModeLabel(root.localDnsMode)
+        detailIconName: 'chevron_right'
+        onActivated: root.localDnsPickerVisible = !root.localDnsPickerVisible
+      }
+
+      ProtonOptionPicker {
+        visible: root.networkPoliciesSupported && root.localDnsPickerVisible
+        width: parent.width
+        options: [
+          { value: 'inherit', label: root.label('use_global_setting'), iconName: 'sliders' },
+          { value: 'allow', label: root.label('allow'), iconName: 'checkmark' },
+          { value: 'block', label: root.label('block'), iconName: 'shield' }
+        ]
+        currentValue: root.localDnsMode
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onSelected: function(value) {
+          root.localDnsMode = String(value)
+          root.localDnsPickerVisible = false
         }
       }
 
@@ -708,7 +879,7 @@ Item {
         bordered: true
         active: true
         enabled: nameField.text.trim().length > 0 && root.targetValid() &&
-          root.connectAndGoValid() &&
+          root.connectAndGoValid() && root.customDnsValid() &&
           root.saveRequestId.length === 0 &&
           !(root.vpnState && root.vpnState.operationBusy)
         onClicked: root.save()

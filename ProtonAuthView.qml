@@ -64,6 +64,13 @@ Item {
     password = ''
   }
 
+  function submitGuest() {
+    if (!authAvailable || authBusy || !vpnState ||
+        !vpnState.supportsMethod('account.login_guest')) return
+    passwordField.text = ''
+    vpnState.loginGuest()
+  }
+
   function submitCode() {
     if (!authAvailable || authBusy || codeField.text.length !== 6) return
     var code = codeField.text
@@ -196,6 +203,33 @@ Item {
         horizontalPadding: Style.spacing.controlPaddingX
         verticalPadding: Style.spacing.controlPaddingY
         onClicked: root.submitLogin()
+      }
+
+      Button {
+        visible: root.vpnState &&
+          root.vpnState.supportsMethod('account.login_guest')
+        width: parent.width
+        text: root.label('continue_as_guest')
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        fontSize: Style.font.body
+        bordered: true
+        enabled: root.authAvailable && !root.authBusy
+        horizontalPadding: Style.spacing.controlPaddingX
+        verticalPadding: Style.spacing.controlPaddingY
+        onClicked: root.submitGuest()
+      }
+
+      Text {
+        visible: root.vpnState &&
+          root.vpnState.supportsMethod('account.login_guest')
+        width: parent.width
+        text: root.label('guest_mode_description')
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        wrapMode: Text.WordWrap
+        horizontalAlignment: Text.AlignHCenter
       }
     }
 

@@ -50,6 +50,7 @@ QtObject {
   property string accountStatus: 'unknown'
   property string accountName: ''
   property int accountTier: -1
+  property bool accountCredentialless: false
   property bool twoFactorCodeSupported: false
   property bool twoFactorSecurityKeySupported: false
   property bool ssoSupported: false
@@ -366,6 +367,7 @@ QtObject {
   function isForegroundMethod(method) {
     switch (String(method || '')) {
     case 'account.login':
+    case 'account.login_guest':
     case 'account.submit_2fa':
     case 'account.authenticate_fido2':
     case 'account.submit_fido2_pin':
@@ -450,6 +452,7 @@ QtObject {
   function localStageForMethod(method) {
     switch (String(method || '')) {
     case 'account.login': return 'auth.submitting_credentials'
+    case 'account.login_guest': return 'auth.creating_guest_session'
     case 'account.submit_2fa': return 'auth.submitting_two_factor'
     case 'account.authenticate_fido2': return 'auth.scanning_security_keys'
     case 'account.submit_fido2_pin': return 'auth.submitting_security_key_pin'
@@ -687,6 +690,10 @@ QtObject {
       username: String(username || ''),
       password: String(password || '')
     })
+  }
+
+  function loginGuest() {
+    return send('account.login_guest', {})
   }
 
   function submitTwoFactor(code) {
@@ -1398,6 +1405,7 @@ QtObject {
     accountName = account.name || ''
     accountTier = account.tier === null || account.tier === undefined
       ? -1 : Number(account.tier)
+    accountCredentialless = !!account.credentialless
     twoFactorCodeSupported = !!account.two_factor_code_supported
     twoFactorSecurityKeySupported = !!account.two_factor_security_key_supported
     ssoSupported = !!account.sso_supported

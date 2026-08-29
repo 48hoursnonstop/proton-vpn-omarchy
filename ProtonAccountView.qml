@@ -20,6 +20,7 @@ Item {
   readonly property string planLabel: !vpnState || vpnState.accountTier < 0
     ? label('plan_unknown')
     : vpnState.accountTier === 0 ? label('plan_free') : label('plan_paid')
+  readonly property bool guest: vpnState && vpnState.accountCredentialless
 
   Column {
     id: content
@@ -40,7 +41,8 @@ Item {
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
       iconName: 'user_circle'
-      title: root.vpnState ? String(root.vpnState.accountName || '') : ''
+      title: root.guest ? root.label('guest')
+        : (root.vpnState ? String(root.vpnState.accountName || '') : '')
       subtitle: root.planLabel
     }
 
@@ -54,6 +56,7 @@ Item {
     }
 
     PanelActionRow {
+      visible: !root.guest
       width: parent.width
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
@@ -70,9 +73,11 @@ Item {
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
       iconName: 'bag_percent'
-      title: root.vpnState && root.vpnState.accountTier > 0
+      title: root.guest ? root.label('create_account')
+        : root.vpnState && root.vpnState.accountTier > 0
         ? root.label('manage_subscription') : root.label('upgrade_plan')
-      subtitle: root.label('authenticated_browser_handoff')
+      subtitle: root.guest ? root.label('opens_secure_browser')
+        : root.label('authenticated_browser_handoff')
       detail: root.vpnState && root.vpnState.requestPending('account.upgrade_url') ? '…' : ''
       detailIconName: root.vpnState && root.vpnState.requestPending('account.upgrade_url')
         ? '' : 'arrow_out_square'
