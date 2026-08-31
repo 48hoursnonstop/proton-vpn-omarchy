@@ -59,18 +59,18 @@ the shell process. Review the source in this repository before confirming.
 If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
-curl -fL --proto '=https' --max-filesize 4284311 -o proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.0/proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst
-curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.0/proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.sig
-curl -fL --proto '=https' --max-filesize 11631 -o proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.0/proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.intoto.jsonl
-curl -fL --proto '=https' --max-filesize 880 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.0/RELEASE-SIGNING-KEY.asc
-printf '%s  %s\n' 8188da788bc033191a48acd46f60406139228c54dd824ce60c222d7ed07dc9d4 proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst | sha256sum -c -
-printf '%s  %s\n' ae259afb3528f8508edbad2a40400be4c4cc5c61356e417d12647c125a596c98 proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
-printf '%s  %s\n' 71146431ba595b997d68efa8e29a4b598ceff2c1bf31d1e281baabf6a0b8bcd2 proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
-gh attestation verify proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.0 --source-digest 3bb7ce0ee0e046e901d87a98df8867ce7235e686 --deny-self-hosted-runners
+curl -fL --proto '=https' --max-filesize 4368840 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
+curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig
+curl -fL --proto '=https' --max-filesize 11447 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl
+curl -fL --proto '=https' --max-filesize 880 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/RELEASE-SIGNING-KEY.asc
+printf '%s  %s\n' 36427ed9fb94cbca49850292eb278feaf200ce6d4116790e379c6bf71e12e7c5 proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst | sha256sum -c -
+printf '%s  %s\n' 5a4a490811a1a6da632b297a1648753d72328c823faaa04b4d01be06c8cb3fad proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
+printf '%s  %s\n' 1d1f6a8fc04691e3532db77037b3a6663f5cb75b0eb5c2033043fa612490917e proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
+gh attestation verify proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.1 --source-digest 79351f3264d1ba1d535197fe3fddf2dbe7984363 --deny-self-hosted-runners
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst
-sudo pacman -U ./proton-vpn-omarchy-0.9.0-1-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
+sudo pacman -U ./proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
 
@@ -149,6 +149,6 @@ directories so reinstalling does not silently erase them.
 
 The release contains the backend's corresponding source archive and Arch build
 recipe; the same code is browsable in the
-[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.0).
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.1).
 Project code is licensed under GPL-3.0-or-later; individual upstream assets
 retain their original notices. See [NOTICE.md](NOTICE.md).
