@@ -59,7 +59,7 @@ Item {
       font.weight: Font.DemiBold
     }
 
-    PanelHero {
+    ProtonPanelHero {
       width: parent.width
       title: root.vpnState && root.vpnState.connected
         ? String(root.vpnState.serverName || root.vpnState.countryName || root.vpnState.countryCode)
@@ -71,15 +71,34 @@ Item {
       fontFamily: root.fontFamily
 
       iconComponent: Component {
-        ProtonVpnMark {
-          iconSize: Style.font.display
-          statusColor: root.vpnState && root.vpnState.connected ? Color.accent : root.dim
-          state: !root.vpnState || root.vpnState.status === 'unknown'
-            ? 'information'
-            : root.vpnState.connected
-              ? 'connected'
-              : root.vpnState.connecting
-                ? 'connecting' : 'disconnected'
+        Item {
+          implicitWidth: root.vpnState && root.vpnState.connected
+            ? Style.space(45) : Style.font.display
+          implicitHeight: root.vpnState && root.vpnState.connected &&
+            root.vpnState.secureCore && root.vpnState.entryCountryCode !== ''
+              ? Style.space(36) : Style.font.display
+
+          ProtonConnectionFlag {
+            visible: root.vpnState && root.vpnState.connected
+            width: Style.space(45)
+            height: root.vpnState && root.vpnState.secureCore &&
+              root.vpnState.entryCountryCode !== ''
+              ? Style.space(36) : Style.space(30)
+            anchors.centerIn: parent
+            exitCountryCode: root.vpnState ? root.vpnState.countryCode : ''
+            entryCountryCode: root.vpnState && root.vpnState.secureCore
+              ? root.vpnState.entryCountryCode : ''
+          }
+
+          ProtonVpnMark {
+            visible: !root.vpnState || !root.vpnState.connected
+            anchors.centerIn: parent
+            iconSize: Style.font.display
+            statusColor: root.dim
+            state: !root.vpnState || root.vpnState.status === 'unknown'
+              ? 'information'
+              : root.vpnState.connecting ? 'connecting' : 'disconnected'
+          }
         }
       }
     }
@@ -108,7 +127,7 @@ Item {
       iconName: 'servers'
       title: root.label('protocol')
       subtitle: root.vpnState && root.vpnState.connected
-        ? root.vpnState.protocol : '—'
+        ? root.strings.protocolName(root.vpnState.protocol) : '—'
     }
 
     PanelActionRow {

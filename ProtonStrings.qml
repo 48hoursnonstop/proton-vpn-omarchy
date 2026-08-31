@@ -1,10 +1,17 @@
 import QtQuick
 import "i18n/Catalogs.js" as Catalogs
+import "i18n/CountryNames.js" as CountryNames
 
 QtObject {
   property string localeName: String(Qt.locale().name || 'en')
   readonly property string localeCode: Catalogs.normalizeLocale(localeName)
+  readonly property string systemLocaleName:
+    Catalogs.preferredLocale(Qt.locale().name || 'en')
   readonly property bool catalogsComplete: Catalogs.catalogsAreComplete()
+
+  function preferredLocale(locale) {
+    return Catalogs.preferredLocale(locale)
+  }
 
   function localeOptions() {
     return Catalogs.localeOptions()
@@ -18,6 +25,32 @@ QtObject {
         return String(options[index].label)
     }
     return String(locale || '')
+  }
+
+  function protocolName(protocol) {
+    switch (String(protocol || '').toLowerCase()) {
+    case 'smart':
+    case 'protun-smart': return text('protocol_smart')
+    case 'wireguard': return text('protocol_wireguard')
+    case 'wireguard-udp': return text('protocol_wireguard_udp')
+    case 'wireguard-tcp': return text('protocol_wireguard_tcp')
+    case 'wireguard-tls': return text('protocol_stealth')
+    case 'protun-udp': return text('protocol_protun_udp')
+    case 'protun-tcp': return text('protocol_protun_tcp')
+    case 'protun-tls': return text('protocol_protun_tls')
+    case 'openvpn': return text('protocol_openvpn')
+    case 'openvpn-udp': return text('protocol_openvpn_udp')
+    case 'openvpn-tcp': return text('protocol_openvpn_tcp')
+    default: return String(protocol || '')
+    }
+  }
+
+  function countryName(code, fallback) {
+    return CountryNames.name(localeName, code, fallback)
+  }
+
+  function countrySearchNames(code, fallback) {
+    return CountryNames.aliases(localeName, code, fallback)
   }
 
   function profileCopyName(name) {

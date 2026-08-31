@@ -166,6 +166,7 @@ Item {
     }
 
     ListView {
+      id: installedAppsList
       width: parent.width
       height: Math.min(contentHeight, Style.space(310))
       implicitHeight: height
@@ -173,6 +174,10 @@ Item {
       boundsBehavior: Flickable.StopAtBounds
       model: root.vpnState ? root.vpnState.installedApps : []
       spacing: Style.space(2)
+      onContentYChanged: {
+        if (root.vpnState && contentY + height >= contentHeight - Style.space(80))
+          root.vpnState.loadMoreApps()
+      }
 
       delegate: PanelActionRow {
         required property var modelData

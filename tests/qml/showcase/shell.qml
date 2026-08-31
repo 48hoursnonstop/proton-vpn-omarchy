@@ -19,7 +19,12 @@ ShellRoot {
     { route: 'settings', icon: 'cog_wheel', label: 'Settings' }
   ]
 
-  ShowcaseState { id: showcaseState }
+  ShowcaseState {
+    id: showcaseState
+    // Regression fixture: a standard server can report EntryCountry equal to
+    // ExitCountry. The production UI must still render one flag.
+    secureCore: showcaseShell.route !== 'home-standard'
+  }
 
   ProtonStrings {
     id: stringTable
@@ -73,7 +78,7 @@ ShellRoot {
             spacing: Style.space(8)
 
             ProtonComponents.ProtonIconButton {
-              visible: route === 'details'
+              visible: route === 'details' || route === 'default'
               iconName: 'chevron_left'
               label: stringTable.text('home')
               foreground: Color.popups.text
@@ -89,6 +94,7 @@ ShellRoot {
                 case 'locations': return locationsComponent
                 case 'profiles': return profilesComponent
                 case 'details': return detailsComponent
+                case 'default': return defaultComponent
                 case 'settings': return settingsComponent
                 default: return homeComponent
                 }
@@ -100,7 +106,7 @@ ShellRoot {
         ProtonComponents.ProtonBottomNavigation {
           id: navigation
           z: 10
-          visible: route !== 'details'
+          visible: route !== 'details' && route !== 'default'
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.bottom: parent.bottom
@@ -167,6 +173,18 @@ ShellRoot {
   Component {
     id: settingsComponent
     ProtonSettingsView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: defaultComponent
+    ProtonDefaultConnectionView {
       vpnState: showcaseState
       strings: stringTable
       foreground: Color.popups.text

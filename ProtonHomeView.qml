@@ -19,11 +19,36 @@ Item {
 
   readonly property Item heroItem: heroBlock
   readonly property Item detailsItem: detailsRow
+  readonly property var activeProfile: root.resolveActiveProfile()
 
   signal cursorRequested(int index)
   signal detailsRequested()
 
   implicitHeight: content.implicitHeight
+
+  function resolveActiveProfile() {
+    if (!vpnState || !vpnState.connected ||
+        String(vpnState.activeProfileId || '') === '' ||
+        !Array.isArray(vpnState.profiles)) return null
+    for (var index = 0; index < vpnState.profiles.length; ++index) {
+      var profile = vpnState.profiles[index]
+      if (String(profile.id || '') === String(vpnState.activeProfileId))
+        return profile
+    }
+    return null
+  }
+
+  function connectedCountry() {
+    return vpnState
+      ? String(vpnState.countryName || vpnState.countryCode || '') : ''
+  }
+
+  function connectionTitle() {
+    var country = connectedCountry()
+    var profileName = activeProfile ? String(activeProfile.name || '') : ''
+    return profileName && country ? profileName + ' — ' + country
+      : profileName || country
+  }
 
   Column {
     id: content
@@ -37,11 +62,11 @@ Item {
       readonly property bool ringVisible:
         root.cursorActive && root.cursorIndex === 0
 
-      PanelHero {
+      ProtonPanelHero {
         id: hero
         width: parent.width
         title: root.vpnState && root.vpnState.connected
-          ? (root.vpnState.countryName || root.vpnState.countryCode)
+          ? root.connectionTitle()
           : 'Proton VPN'
         meta: !root.vpnState || !root.vpnState.agentAvailable
           ? root.strings.text('agent_unavailable')
@@ -61,18 +86,50 @@ Item {
         iconOpacity: root.vpnState && root.vpnState.connected ? 1.0 : 0.58
 
         iconComponent: Component {
-          ProtonVpnMark {
-            iconSize: Style.font.display
-            statusColor: root.vpnState && root.vpnState.connected
-              ? Color.accent
-              : root.vpnState && root.vpnState.connecting
+          Item {
+            implicitWidth: root.vpnState && root.vpnState.connected
+              ? Style.space(45) : Style.font.display
+            implicitHeight: root.vpnState && root.vpnState.connected &&
+              (root.activeProfile !== null ||
+               (root.vpnState.secureCore && root.vpnState.entryCountryCode !== ''))
+                ? Style.space(36) : Style.font.display
+
+            ProtonConnectionFlag {
+              visible: root.vpnState && root.vpnState.connected &&
+                root.activeProfile === null
+              width: Style.space(45)
+              height: root.vpnState && root.vpnState.secureCore &&
+                root.vpnState.entryCountryCode !== ''
+                ? Style.space(36) : Style.space(30)
+              anchors.centerIn: parent
+              exitCountryCode: root.vpnState ? root.vpnState.countryCode : ''
+              entryCountryCode: root.vpnState && root.vpnState.secureCore
+                ? root.vpnState.entryCountryCode : ''
+            }
+
+            ProtonProfileConnectionIcon {
+              visible: root.vpnState && root.vpnState.connected &&
+                root.activeProfile !== null
+              width: Style.space(45)
+              height: Style.space(36)
+              anchors.centerIn: parent
+              countryCode: root.vpnState ? root.vpnState.countryCode : ''
+              profileCategory: root.activeProfile
+                ? String(root.activeProfile.iconName || 'Speed') : 'Speed'
+              profileColor: root.activeProfile
+                ? String(root.activeProfile.color || '#C857E7') : '#C857E7'
+            }
+
+            ProtonVpnMark {
+              visible: !root.vpnState || !root.vpnState.connected
+              anchors.centerIn: parent
+              iconSize: Style.font.display
+              statusColor: root.vpnState && root.vpnState.connecting
                 ? root.foreground : root.dim
-            state: !root.vpnState || root.vpnState.status === 'unknown'
-              ? 'information'
-              : root.vpnState.connected
-                ? 'connected'
-                : root.vpnState.connecting
-                  ? 'connecting' : 'disconnected'
+              state: !root.vpnState || root.vpnState.status === 'unknown'
+                ? 'information'
+                : root.vpnState.connecting ? 'connecting' : 'disconnected'
+            }
           }
         }
 
@@ -124,7 +181,7 @@ Item {
       visible: root.vpnState && root.vpnState.connected
       width: parent.width
       text: root.vpnState
-        ? root.vpnState.protocolName(root.vpnState.protocol) +
+        ? root.strings.protocolName(root.vpnState.protocol) +
           '  ·  ' + root.vpnState.countryCode : ''
       color: root.dim
       font.family: root.fontFamily

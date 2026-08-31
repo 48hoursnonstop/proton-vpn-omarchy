@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import 'components'
+import 'i18n/Search.js' as Search
 
 Item {
   id: root
@@ -20,17 +21,21 @@ Item {
   property bool selectionMode: false
   property var selectedLocation: null
   property string selectedKind: ''
+  property var currentSelection: null
+  property bool restoreSelectionPending: false
 
   signal locationSelected(var selection)
 
-  readonly property bool showingServers: selectedLocation !== null ||
-    searchField.text.trim().length >= 2
+  readonly property string searchQuery: searchField.text.trim()
+  readonly property bool searching: selectedLocation === null && searchQuery.length > 0
+  readonly property bool showingServers: selectedLocation !== null
   readonly property bool subpageActive: selectedLocation !== null
   readonly property var baseLocations: section === 'gateways'
     ? (vpnState ? vpnState.gateways : [])
     : (vpnState ? vpnState.countries : [])
   readonly property var filteredLocations: filterLocations()
   readonly property var logicalTargets: buildLogicalTargets()
+  readonly property var searchResults: buildSearchResults()
 
   implicitHeight: content.implicitHeight
 
@@ -38,31 +43,253 @@ Item {
     return strings ? strings.text(key) : key
   }
 
+  function countryDisplayName(country) {
+    if (!country) return ''
+    var code = String(country.code || country.country_code || '')
+    var fallback = String(country.name || country.country_name || code)
+    return strings && strings.countryName
+      ? strings.countryName(code, fallback) : fallback
+  }
+
+  function countryAliases(country) {
+    if (!country) return []
+    var code = String(country.code || country.country_code || '')
+    var fallback = String(country.name || country.country_name || code)
+    return strings && strings.countrySearchNames
+      ? strings.countrySearchNames(code, fallback)
+      : [fallback, code]
+  }
+
+  function supportsFeature(country) {
+    if (!country) return false
+    if (feature === 'standard') return country.standard !== false
+    return !!country[feature]
+  }
+
+  function targetKindForFeature(locationKind) {
+    if (feature === 'secure_core') return 'secureCore'
+    if (feature === 'p2p') return 'p2p'
+    if (feature === 'tor') return 'tor'
+    return String(locationKind || 'fastest')
+  }
+
+  function currentStrategy() {
+    if (!currentSelection) return 'fastest'
+    if (String(currentSelection.targetKind || '') === 'random') return 'random'
+    return String(currentSelection.selectionStrategy || 'fastest')
+  }
+
+  function currentGlobalMatches(strategy, excludingMine) {
+    if (!currentSelection) return false
+    var expectedKind = targetKindForFeature('fastest')
+    var actualKind = String(currentSelection.targetKind || 'fastest')
+    if (strategy === 'random' && feature === 'standard' && actualKind === 'random')
+      actualKind = 'fastest'
+    return actualKind === expectedKind &&
+      String(currentSelection.countryCode || '') === '' &&
+      String(currentSelection.gatewayName || '') === '' &&
+      currentStrategy() === strategy &&
+      !!currentSelection.excludeMyCountry === !!excludingMine
+  }
+
+  function currentLocationMatches(strategy) {
+    if (!currentSelection || !selectedLocation) return false
+    if (selectedKind === 'gateway') {
+      return String(currentSelection.gatewayName || '') ===
+          String(selectedLocation.name || '') &&
+        String(currentSelection.serverName || '') === '' &&
+        currentStrategy() === strategy
+    }
+    return String(currentSelection.countryCode || '').toUpperCase() ===
+        String(selectedLocation.code || '').toUpperCase() &&
+      String(currentSelection.state || '') === '' &&
+      String(currentSelection.city || '') === '' &&
+      String(currentSelection.serverName || '') === '' &&
+      currentStrategy() === strategy
+  }
+
+  function currentServerMatches(server) {
+    return !!currentSelection && !!server &&
+      String(currentSelection.serverName || '').toLowerCase() ===
+        String(server.name || '').toLowerCase()
+  }
+
+  function sortSearchEntries(left, right) {
+    var rankDifference = Number(left.rank || 0) - Number(right.rank || 0)
+    if (rankDifference !== 0) return rankDifference
+    var leftTitle = Search.normalize(left.title)
+    var rightTitle = Search.normalize(right.title)
+    return leftTitle < rightTitle ? -1 : leftTitle > rightTitle ? 1 : 0
+  }
+
+  function sectionedSearchResults(sectionKey, items, output) {
+    if (items.length === 0) return
+    output.push({ resultType: 'header', title: label(sectionKey) })
+    for (var index = 0; index < items.length; ++index) output.push(items[index])
+  }
+
+  function searchableServers() {
+    var output = []
+    var source = vpnState && Array.isArray(vpnState.servers) ? vpnState.servers : []
+    for (var index = 0; index < source.length; ++index) {
+      var server = source[index]
+      if (serverMatchesCurrentSearch(server) &&
+          Search.matchRank(searchQuery, [server.name]) >= 0) output.push(server)
+    }
+    var remote = vpnState ? vpnState.remoteSearchServer : null
+    if (remote && serverMatchesCurrentSearch(remote) &&
+        Search.matchRank(searchQuery, [remote.name]) >= 0) {
+      var duplicate = output.some(function(item) {
+        return String(item.id || item.name) === String(remote.id || remote.name)
+      })
+      if (!duplicate) output.push(remote)
+    }
+    return output
+  }
+
+  function serverMatchesCurrentSearch(server) {
+    if (!server) return false
+    var gateway = String(server.gateway_name || '')
+    if (section === 'gateways') return gateway.length > 0
+    if (gateway.length > 0) return false
+    if (feature === 'secure_core') return !!server.secure_core
+    if (feature === 'p2p') return !!server.p2p
+    if (feature === 'tor') return !!server.tor
+    return !server.secure_core && !server.restricted && !server.partner
+  }
+
+  function buildSearchResults() {
+    if (!searching) return []
+    var countries = []
+    var states = []
+    var cities = []
+    var gateways = []
+    var servers = []
+    var output = []
+
+    if (section === 'gateways') {
+      var gatewaySource = vpnState && Array.isArray(vpnState.gateways)
+        ? vpnState.gateways : []
+      for (var gatewayIndex = 0; gatewayIndex < gatewaySource.length; ++gatewayIndex) {
+        var gateway = gatewaySource[gatewayIndex]
+        var gatewayRank = Search.matchRank(searchQuery, [gateway.name])
+        if (gatewayRank >= 0) gateways.push({
+          resultType: 'gateway', rank: gatewayRank, gateway: gateway,
+          title: String(gateway.name || ''),
+          subtitle: String(gateway.available_server_count || 0) + ' / ' +
+            String(gateway.server_count || 0) + ' ' + label('servers').toLowerCase()
+        })
+      }
+    } else {
+      var countrySource = vpnState && Array.isArray(vpnState.countries)
+        ? vpnState.countries : []
+      for (var countryIndex = 0; countryIndex < countrySource.length; ++countryIndex) {
+        var country = countrySource[countryIndex]
+        if (!supportsFeature(country)) continue
+        var displayName = countryDisplayName(country)
+        var countryRank = Search.matchRank(searchQuery, countryAliases(country))
+        if (countryRank >= 0) countries.push({
+          resultType: 'country', rank: countryRank, country: country,
+          title: displayName,
+          subtitle: String(country.available_server_count || 0) + ' / ' +
+            String(country.server_count || 0) + ' ' + label('servers').toLowerCase()
+        })
+
+        if (feature !== 'standard' && feature !== 'p2p') continue
+        var stateKey = feature === 'p2p' ? 'p2p_states' : 'states'
+        var cityKey = feature === 'p2p' ? 'p2p_cities' : 'cities'
+        var stateSource = Array.isArray(country[stateKey]) ? country[stateKey] : []
+        for (var stateIndex = 0; stateIndex < stateSource.length; ++stateIndex) {
+          var stateItem = stateSource[stateIndex]
+          var stateName = String(stateItem.name || '')
+          var stateRank = Search.matchRank(searchQuery, [stateName])
+          if (stateRank >= 0) states.push({
+            resultType: 'state', rank: stateRank, country: country,
+            state: stateName, title: stateName,
+            subtitle: displayName + ' · ' + label('fastest_in_state')
+          })
+          var stateCities = Array.isArray(stateItem.cities) ? stateItem.cities : []
+          for (var nestedIndex = 0; nestedIndex < stateCities.length; ++nestedIndex) {
+            var nestedCity = String(stateCities[nestedIndex] || '')
+            var nestedRank = Search.matchRank(searchQuery, [nestedCity, nestedCity + ' ' + stateName])
+            if (nestedRank >= 0) cities.push({
+              resultType: 'city', rank: nestedRank, country: country,
+              state: stateName, city: nestedCity, title: nestedCity,
+              subtitle: stateName + ' · ' + displayName
+            })
+          }
+        }
+        var citySource = Array.isArray(country[cityKey]) ? country[cityKey] : []
+        for (var cityIndex = 0; cityIndex < citySource.length; ++cityIndex) {
+          var cityName = String(citySource[cityIndex] || '')
+          var cityRank = Search.matchRank(searchQuery, [cityName])
+          if (cityRank >= 0) cities.push({
+            resultType: 'city', rank: cityRank, country: country,
+            state: '', city: cityName, title: cityName,
+            subtitle: displayName + ' · ' + label('fastest_in_city')
+          })
+        }
+      }
+    }
+
+    var serverSource = searchableServers()
+    for (var serverIndex = 0; serverIndex < serverSource.length; ++serverIndex) {
+      var server = serverSource[serverIndex]
+      servers.push({
+        resultType: 'server', rank: Search.matchRank(searchQuery, [server.name]),
+        server: server, title: String(server.name || ''),
+        subtitle: server.secure_core
+          ? countryDisplayName({ code: server.entry_country_code,
+              name: server.entry_country_name }) + ' → ' +
+            countryDisplayName({ code: server.country_code, name: server.country_name })
+          : (server.city ? String(server.city) + ' · ' : '') +
+            String(server.load || 0) + '%'
+      })
+    }
+
+    countries.sort(sortSearchEntries)
+    states.sort(sortSearchEntries)
+    cities.sort(sortSearchEntries)
+    gateways.sort(sortSearchEntries)
+    servers.sort(sortSearchEntries)
+    sectionedSearchResults('countries', countries, output)
+    sectionedSearchResults('states', states, output)
+    sectionedSearchResults('cities', cities, output)
+    sectionedSearchResults('gateways', gateways, output)
+    sectionedSearchResults('servers', servers, output)
+    return output
+  }
+
   function filterLocations() {
-    var needle = searchField.text.trim().toLowerCase()
     var output = []
     for (var index = 0; index < baseLocations.length; ++index) {
       var item = baseLocations[index]
-      if (section === 'countries' && feature !== 'standard' && !item[feature])
+      if (section === 'countries' && !supportsFeature(item))
         continue
-      var haystack = String(item.name || item.code || '').toLowerCase()
-      if (needle.length === 0 || haystack.indexOf(needle) >= 0)
-        output.push(item)
+      output.push(item)
     }
+    output.sort(function(left, right) {
+      var leftName = section === 'countries' ? countryDisplayName(left) : String(left.name || '')
+      var rightName = section === 'countries' ? countryDisplayName(right) : String(right.name || '')
+      var leftNormalized = Search.normalize(leftName)
+      var rightNormalized = Search.normalize(rightName)
+      return leftNormalized < rightNormalized ? -1
+        : leftNormalized > rightNormalized ? 1 : 0
+    })
     return output
   }
 
   function buildLogicalTargets() {
     if (!selectedLocation || selectedKind !== 'country') return []
     var output = []
-    var needle = searchField.text.trim().toLowerCase()
+    var needle = Search.normalize(searchQuery)
     if (feature === 'secure_core') {
       var entries = Array.isArray(selectedLocation.secure_core_entries)
         ? selectedLocation.secure_core_entries : []
       for (var entryIndex = 0; entryIndex < entries.length; ++entryIndex) {
         var entry = entries[entryIndex]
-        var entryName = String(entry.name || entry.code || '')
-        if (needle.length === 0 || entryName.toLowerCase().indexOf(needle) >= 0)
+        var entryName = countryDisplayName(entry)
+        if (needle.length === 0 || Search.matchRank(needle, [entryName]) >= 0)
           output.push({
             kind: 'secureCore',
             entryCountryCode: String(entry.code || ''),
@@ -84,7 +311,7 @@ Item {
     for (var stateIndex = 0; stateIndex < states.length; ++stateIndex) {
       var stateItem = states[stateIndex]
       var stateName = String(stateItem.name || '')
-      if (needle.length === 0 || stateName.toLowerCase().indexOf(needle) >= 0)
+      if (needle.length === 0 || Search.matchRank(needle, [stateName]) >= 0)
         output.push({
           kind: 'state', state: stateName, city: '',
           title: stateName, subtitle: label('fastest_in_state')
@@ -92,8 +319,7 @@ Item {
       var stateCities = Array.isArray(stateItem.cities) ? stateItem.cities : []
       for (var cityIndex = 0; cityIndex < stateCities.length; ++cityIndex) {
         var stateCity = String(stateCities[cityIndex] || '')
-        var stateCitySearch = (stateCity + ' ' + stateName).toLowerCase()
-        if (needle.length === 0 || stateCitySearch.indexOf(needle) >= 0)
+        if (needle.length === 0 || Search.matchRank(needle, [stateCity, stateCity + ' ' + stateName]) >= 0)
           output.push({
             kind: 'city', state: stateName, city: stateCity,
             title: stateCity, subtitle: stateName
@@ -104,7 +330,7 @@ Item {
       ? selectedLocation[cityKey] : []
     for (var index = 0; index < cities.length; ++index) {
       var cityName = String(cities[index] || '')
-      if (needle.length === 0 || cityName.toLowerCase().indexOf(needle) >= 0)
+      if (needle.length === 0 || Search.matchRank(needle, [cityName]) >= 0)
         output.push({
           kind: 'city', state: '', city: cityName,
           title: cityName, subtitle: label('fastest_in_city')
@@ -119,12 +345,50 @@ Item {
     if (showingServers) requestServers()
   }
 
+  function beginSelection(selection, nextSection, nextFeature) {
+    currentSelection = selection || null
+    restoreSelectionPending = true
+    section = String(nextSection || 'countries')
+    feature = String(nextFeature || 'standard')
+    resetSelection()
+    clearSearch()
+    refresh()
+    restoreSelectionPath()
+  }
+
+  function restoreSelectionPath() {
+    if (!restoreSelectionPending || !currentSelection) return
+    var source = section === 'gateways'
+      ? (vpnState ? vpnState.gateways : [])
+      : (vpnState ? vpnState.countries : [])
+    var wanted = section === 'gateways'
+      ? String(currentSelection.gatewayName || '')
+      : String(currentSelection.countryCode || '').toUpperCase()
+    if (wanted.length === 0) {
+      restoreSelectionPending = false
+      return
+    }
+    for (var index = 0; index < source.length; ++index) {
+      var candidate = source[index]
+      var value = section === 'gateways'
+        ? String(candidate.name || '')
+        : String(candidate.code || '').toUpperCase()
+      if (value === wanted) {
+        restoreSelectionPending = false
+        openLocation(candidate, section === 'gateways' ? 'gateway' : 'country')
+        return
+      }
+    }
+  }
+
   function requestServers() {
     if (!vpnState) return
-    var query = searchField.text.trim().length >= 2
-      ? searchField.text.trim() : ''
+    var query = searchQuery
     if (!selectedLocation && query.length === 0) {
       vpnState.servers = []
+      vpnState.serverTotal = 0
+      vpnState.remoteSearchServer = null
+      vpnState.desiredServerLookupQuery = ''
       return
     }
     var country = selectedKind === 'country' && selectedLocation
@@ -135,8 +399,20 @@ Item {
       query,
       country,
       gateway,
-      selectedKind === 'gateway' ? 'all' : feature
+      selectedKind === 'gateway' || section === 'gateways' ? 'all' : feature,
+      selectedKind === 'gateway' || section === 'gateways' ? 'gateways' : 'consumer'
     )
+  }
+
+  function clearSearch() {
+    searchDebounce.stop()
+    remoteLookupTimer.stop()
+    searchField.text = ''
+    requestServers()
+  }
+
+  function setSearchQuery(value) {
+    searchField.text = String(value || '')
   }
 
   function resetSelection() {
@@ -152,29 +428,36 @@ Item {
   }
 
   function selectSection(value) {
+    restoreSelectionPending = false
     section = value
     resetSelection()
+    if (searchQuery.length > 0) Qt.callLater(requestServers)
   }
 
   function selectFeature(value) {
+    restoreSelectionPending = false
     feature = value
     resetSelection()
+    if (searchQuery.length > 0) Qt.callLater(requestServers)
   }
 
   function openLocation(item, kind) {
+    restoreSelectionPending = false
     selectedLocation = item
     selectedKind = kind
     searchField.text = ''
     requestServers()
   }
 
-  function chooseBestLocation() {
+  function chooseBestLocation(strategy, excludingMine) {
+    var resolvedStrategy = String(strategy || 'fastest')
+    var resolvedExclusion = !!excludingMine
     if (!selectedLocation) {
       if (!selectionMode || section !== 'countries') return
       locationSelected({
-        targetKind: feature === 'secure_core' ? 'secureCore'
-          : feature === 'p2p' ? 'p2p'
-          : feature === 'tor' ? 'tor' : 'fastest'
+        targetKind: targetKindForFeature('fastest'),
+        selectionStrategy: resolvedStrategy,
+        excludeMyCountry: resolvedExclusion
       })
       return
     }
@@ -186,16 +469,18 @@ Item {
     if (selectedKind === 'gateway') {
       locationSelected({
         targetKind: 'gateway',
+        selectionStrategy: resolvedStrategy,
+        excludeMyCountry: false,
         gatewayName: String(selectedLocation.name || '')
       })
       return
     }
     locationSelected({
-      targetKind: feature === 'secure_core' ? 'secureCore'
-        : feature === 'p2p' ? 'p2p'
-        : feature === 'tor' ? 'tor' : 'country',
+      targetKind: targetKindForFeature('country'),
+      selectionStrategy: resolvedStrategy,
+      excludeMyCountry: false,
       countryCode: String(selectedLocation.code || ''),
-      countryName: String(selectedLocation.name || '')
+      countryName: countryDisplayName(selectedLocation)
     })
   }
 
@@ -210,13 +495,63 @@ Item {
         : server.secure_core ? 'secureCore'
         : feature === 'p2p' ? 'p2p'
         : feature === 'tor' ? 'tor' : 'server',
+      selectionStrategy: 'fastest',
+      excludeMyCountry: false,
       countryCode: String(server.country_code || ''),
-      countryName: String(server.country_name || ''),
+      countryName: countryDisplayName({
+        code: server.country_code, name: server.country_name
+      }),
       entryCountryCode: String(server.entry_country_code || ''),
       entryCountryName: String(server.entry_country_name || ''),
       serverName: String(server.name || ''),
       gatewayName: gateway
     })
+  }
+
+  function chooseSearchResult(item) {
+    if (!item) return
+    if (item.resultType === 'server') {
+      chooseServer(item.server)
+      return
+    }
+    if (item.resultType === 'gateway') {
+      if (selectionMode) {
+        openLocation(item.gateway, 'gateway')
+      } else {
+        vpnState.connectGateway(item.gateway)
+      }
+      return
+    }
+    var country = item.country
+    if (!country) return
+    if (selectionMode && item.resultType === 'country') {
+      openLocation(country, 'country')
+      return
+    }
+    var targetKind = item.resultType
+    if (item.resultType === 'country') {
+      targetKind = feature === 'secure_core' ? 'secureCore'
+        : feature === 'p2p' ? 'p2p'
+        : feature === 'tor' ? 'tor' : 'country'
+    } else if (selectionMode && feature === 'p2p') {
+      targetKind = 'p2p'
+    }
+    var selection = {
+      targetKind: targetKind,
+      selectionStrategy: 'fastest',
+      excludeMyCountry: false,
+      countryCode: String(country.code || ''),
+      countryName: countryDisplayName(country),
+      state: String(item.state || ''),
+      city: String(item.city || '')
+    }
+    if (selectionMode) {
+      locationSelected(selection)
+    } else if (item.resultType === 'country') {
+      vpnState.connectCountry(country, feature)
+    } else {
+      vpnState.connectLocation(country, selection, feature)
+    }
   }
 
   function chooseLogicalTarget(item) {
@@ -226,8 +561,10 @@ Item {
       // keep the hierarchy kind and record the feature in the recent entry.
       targetKind: selectionMode && feature === 'p2p'
         ? 'p2p' : String(item.kind || 'country'),
+      selectionStrategy: 'fastest',
+      excludeMyCountry: false,
       countryCode: String(selectedLocation.code || ''),
-      countryName: String(selectedLocation.name || ''),
+      countryName: countryDisplayName(selectedLocation),
       entryCountryCode: String(item.entryCountryCode || ''),
       entryCountryName: String(item.entryCountryName || ''),
       state: String(item.state || ''),
@@ -241,6 +578,8 @@ Item {
   }
 
   onVisibleChanged: if (visible) refresh()
+  onBaseLocationsChanged: if (visible && restoreSelectionPending)
+    Qt.callLater(restoreSelectionPath)
   Component.onCompleted: if (visible) refresh()
 
   Column {
@@ -266,7 +605,9 @@ Item {
       Text {
         Layout.fillWidth: true
         text: root.selectedLocation
-          ? String(root.selectedLocation.name || root.selectedLocation.code || '')
+          ? (root.selectedKind === 'country'
+              ? root.countryDisplayName(root.selectedLocation)
+              : String(root.selectedLocation.name || ''))
           : root.sectionSwitcherVisible
             ? root.label('locations')
             : root.section === 'gateways'
@@ -286,33 +627,69 @@ Item {
       }
     }
 
-    TextField {
-      id: searchField
+    RowLayout {
       width: parent.width
-      placeholderText: root.label('search_locations')
-      foreground: root.foreground
-      accent: Color.accent
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.body
-      horizontalPadding: Style.spacing.controlGap
-      verticalPadding: Style.spacing.controlPaddingY
-      onTextChanged: searchDebounce.restart()
+      spacing: Style.space(5)
+
+      TextField {
+        id: searchField
+        Layout.fillWidth: true
+        placeholderText: root.label('search_locations')
+        foreground: root.foreground
+        accent: Color.accent
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+        horizontalPadding: Style.spacing.controlGap
+        verticalPadding: Style.spacing.controlPaddingY
+        onTextChanged: {
+          searchDebounce.restart()
+          if (Search.canonicalServerLookup(text)) {
+            remoteLookupTimer.interval = 2500
+            remoteLookupTimer.restart()
+          }
+          else remoteLookupTimer.stop()
+        }
+      }
+
+      ProtonIconButton {
+        visible: root.searchQuery.length > 0
+        iconName: 'cross'
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        tooltipText: root.label('clear_search')
+        onClicked: root.clearSearch()
+      }
     }
 
     Timer {
       id: searchDebounce
       interval: 250
       repeat: false
+      onTriggered: root.requestServers()
+    }
+
+    Timer {
+      id: remoteLookupTimer
+      interval: 2500
+      repeat: false
       onTriggered: {
-        if (searchField.text.trim().length === 0 ||
-            searchField.text.trim().length >= 2)
-          root.requestServers()
+        if (!root.vpnState || root.searchQuery.length === 0) return
+        if (root.vpnState.serversLoading) {
+          // A slow local catalog response must not permanently suppress the
+          // exact remote lookup. Retry briefly, but preserve the initial
+          // delay for each new query so normal searches stay local-first.
+          interval = 500
+          restart()
+          return
+        }
+        interval = 2500
+        if (root.vpnState.serverTotal === 0)
+          root.vpnState.lookupServer(root.searchQuery)
       }
     }
 
     RowLayout {
-      visible: root.sectionSwitcherVisible && root.selectedLocation === null &&
-        searchField.text.trim().length < 2
+      visible: root.sectionSwitcherVisible && root.selectedLocation === null
       width: parent.width
       spacing: Style.space(8)
 
@@ -339,8 +716,7 @@ Item {
     }
 
     RowLayout {
-      visible: root.selectedLocation === null && root.section === 'countries' &&
-        searchField.text.trim().length < 2
+      visible: root.selectedLocation === null && root.section === 'countries'
       width: parent.width
       spacing: Style.space(5)
 
@@ -368,18 +744,52 @@ Item {
 
     PanelActionRow {
       visible: root.selectionMode && root.selectedLocation === null &&
-        root.section === 'countries' && searchField.text.trim().length < 2
+        root.section === 'countries' && !root.searching
       width: parent.width
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
-      iconName: 'bolt'
+      specialFlag: 'Fastest'
       title: root.feature === 'secure_core' ? root.label('fastest_secure_core')
         : root.feature === 'p2p' ? root.label('fastest_p2p')
         : root.feature === 'tor' ? root.label('fastest_tor')
-        : root.label('fastest_server')
+        : root.label('fastest_country')
       subtitle: root.label('best_available_profile_target')
-      detailIconName: 'chevron_right'
-      onActivated: root.chooseBestLocation()
+      detailIconName: root.currentGlobalMatches('fastest', false)
+        ? 'checkmark' : 'chevron_right'
+      checked: root.currentGlobalMatches('fastest', false)
+      onActivated: root.chooseBestLocation('fastest', false)
+    }
+
+    PanelActionRow {
+      visible: root.selectionMode && root.selectedLocation === null &&
+        root.section === 'countries' && root.feature !== 'tor' &&
+        !root.searching
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      specialFlag: 'Fastest'
+      title: root.label('fastest_country_excluding_my_country')
+      subtitle: root.label('exclude_current_country_description')
+      detailIconName: root.currentGlobalMatches('fastest', true)
+        ? 'checkmark' : 'chevron_right'
+      checked: root.currentGlobalMatches('fastest', true)
+      onActivated: root.chooseBestLocation('fastest', true)
+    }
+
+    PanelActionRow {
+      visible: root.selectionMode && root.selectedLocation === null &&
+        root.section === 'countries' && root.feature !== 'tor' &&
+        !root.searching
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      specialFlag: 'Random'
+      title: root.label('random_country')
+      subtitle: root.label('random_profile_description')
+      detailIconName: root.currentGlobalMatches('random', false)
+        ? 'checkmark' : 'chevron_right'
+      checked: root.currentGlobalMatches('random', false)
+      onActivated: root.chooseBestLocation('random', false)
     }
 
     PanelActionRow {
@@ -387,7 +797,9 @@ Item {
       width: parent.width
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
-      iconName: 'bolt'
+      flagCode: root.selectedKind === 'country' && root.selectedLocation
+        ? String(root.selectedLocation.code || '') : ''
+      specialFlag: root.selectedKind === 'gateway' ? 'Gateway' : ''
       title: root.selectedKind === 'gateway'
         ? root.label('fastest_gateway')
         : root.feature === 'secure_core' ? root.label('fastest_secure_core')
@@ -395,19 +807,37 @@ Item {
         : root.feature === 'tor' ? root.label('fastest_tor')
         : root.label('fastest_server')
       subtitle: root.label('connect_best_available')
-      detailIconName: 'chevron_right'
+      detailIconName: root.currentLocationMatches('fastest')
+        ? 'checkmark' : 'chevron_right'
+      checked: root.currentLocationMatches('fastest')
       busy: !root.selectionMode && root.vpnState &&
         root.vpnState.tunnelOperationBusy
       enabled: root.selectionMode || !(root.vpnState &&
         root.vpnState.tunnelOperationBusy)
       onActivated: {
-        root.chooseBestLocation()
+        root.chooseBestLocation('fastest', false)
       }
+    }
+
+    PanelActionRow {
+      visible: root.selectionMode && root.selectedLocation !== null
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      flagCode: root.selectedKind === 'country' && root.selectedLocation
+        ? String(root.selectedLocation.code || '') : ''
+      specialFlag: root.selectedKind === 'gateway' ? 'Gateway' : ''
+      title: root.label('random_server')
+      subtitle: root.label('random_server_in_location_description')
+      detailIconName: root.currentLocationMatches('random')
+        ? 'checkmark' : 'chevron_right'
+      checked: root.currentLocationMatches('random')
+      onActivated: root.chooseBestLocation('random', false)
     }
 
     ListView {
       id: locationsList
-      visible: !root.showingServers
+      visible: !root.showingServers && !root.searching
       width: parent.width
       height: Math.min(contentHeight, Style.space(410))
       implicitHeight: height
@@ -421,9 +851,11 @@ Item {
         width: ListView.view.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconText: root.section === 'countries' ? String(modelData.code || '') : ''
-        iconName: root.section === 'gateways' ? 'servers' : ''
-        title: String(modelData.name || modelData.code || '')
+        flagCode: root.section === 'countries' ? String(modelData.code || '') : ''
+        specialFlag: root.section === 'gateways' ? 'Gateway' : ''
+        title: root.section === 'countries'
+          ? root.countryDisplayName(modelData)
+          : String(modelData.name || '')
         subtitle: String(modelData.available_server_count || 0) + ' / ' +
           String(modelData.server_count || 0) + ' ' + root.label('servers').toLowerCase()
         detailIconName: 'chevron_right'
@@ -431,6 +863,77 @@ Item {
           modelData,
           root.section === 'countries' ? 'country' : 'gateway'
         )
+      }
+    }
+
+    ListView {
+      id: searchResultsList
+      visible: root.searching
+      width: parent.width
+      height: Math.min(contentHeight, Style.space(410))
+      implicitHeight: height
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
+      model: root.searchResults
+      spacing: Style.space(2)
+      onContentYChanged: {
+        if (root.vpnState && contentY + height >= contentHeight - Style.space(80))
+          root.vpnState.loadMoreServers()
+      }
+
+      delegate: Item {
+        id: searchResultDelegate
+        required property var modelData
+        width: ListView.view.width
+        height: modelData.resultType === 'header'
+          ? Style.space(28) : searchResultRow.implicitHeight
+
+        Text {
+          visible: searchResultDelegate.modelData.resultType === 'header'
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: Style.space(3)
+          text: String(searchResultDelegate.modelData.title || '').toUpperCase()
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          font.weight: Font.DemiBold
+          elide: Text.ElideRight
+        }
+
+        PanelActionRow {
+          id: searchResultRow
+          visible: searchResultDelegate.modelData.resultType !== 'header'
+          width: parent.width
+          rowForeground: root.foreground
+          rowFontFamily: root.fontFamily
+          flagCode: searchResultDelegate.modelData.resultType === 'gateway'
+            ? '' : searchResultDelegate.modelData.resultType === 'server'
+              ? String((searchResultDelegate.modelData.server || {}).country_code || '')
+              : String((searchResultDelegate.modelData.country || {}).code || '')
+          entryFlagCode: searchResultDelegate.modelData.resultType === 'server' &&
+            !!(searchResultDelegate.modelData.server || {}).secure_core
+              ? String((searchResultDelegate.modelData.server || {}).entry_country_code || '') : ''
+          specialFlag: searchResultDelegate.modelData.resultType === 'gateway' ? 'Gateway' : ''
+          title: String(searchResultDelegate.modelData.title || '')
+          subtitle: String(searchResultDelegate.modelData.subtitle || '')
+          detailIconName: {
+            var server = searchResultDelegate.modelData.server || {}
+            return searchResultDelegate.modelData.resultType === 'server' &&
+              (server.maintenance || !server.enabled)
+                ? 'minus_circle_filled' : root.selectionMode ? 'chevron_right' : 'play'
+          }
+          enabled: {
+            if (searchResultDelegate.modelData.resultType === 'server') {
+              var server = searchResultDelegate.modelData.server || {}
+              if (!server.enabled || server.maintenance) return false
+            }
+            return root.selectionMode || !(root.vpnState && root.vpnState.tunnelOperationBusy)
+          }
+          busy: !root.selectionMode && root.vpnState && root.vpnState.tunnelOperationBusy
+          onActivated: root.chooseSearchResult(searchResultDelegate.modelData)
+        }
       }
     }
 
@@ -450,8 +953,10 @@ Item {
         width: ListView.view.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: String(modelData.kind || '') === 'secureCore'
-          ? 'locks' : 'map_pin'
+        flagCode: root.selectedLocation
+          ? String(root.selectedLocation.code || '') : ''
+        entryFlagCode: String(modelData.kind || '') === 'secureCore'
+          ? String(modelData.entryCountryCode || '') : ''
         title: String(modelData.title || '')
         subtitle: String(modelData.subtitle || '')
         detailIconName: 'play'
@@ -473,20 +978,28 @@ Item {
       boundsBehavior: Flickable.StopAtBounds
       model: root.vpnState ? root.vpnState.servers : []
       spacing: Style.space(2)
+      onContentYChanged: {
+        if (root.vpnState && contentY + height >= contentHeight - Style.space(80))
+          root.vpnState.loadMoreServers()
+      }
 
       delegate: PanelActionRow {
         required property var modelData
         width: ListView.view.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconText: String(modelData.country_code || '')
+        flagCode: String(modelData.country_code || '')
+        entryFlagCode: modelData.secure_core
+          ? String(modelData.entry_country_code || '') : ''
         title: String(modelData.name || '')
         subtitle: (modelData.secure_core
           ? String(modelData.entry_country_name || modelData.entry_country_code || '') + ' → '
           : modelData.city ? String(modelData.city) + ' · ' : '') +
           String(modelData.load || 0) + '%'
         detailIconName: modelData.maintenance || !modelData.enabled
-          ? 'minus_circle_filled' : 'play'
+          ? 'minus_circle_filled'
+          : root.currentServerMatches(modelData) ? 'checkmark' : 'play'
+        checked: root.currentServerMatches(modelData)
         enabled: !!modelData.enabled && !modelData.maintenance &&
           (root.selectionMode || !(root.vpnState &&
             root.vpnState.tunnelOperationBusy))
@@ -497,10 +1010,12 @@ Item {
     }
 
     Text {
-      visible: root.showingServers && root.vpnState &&
-        !root.vpnState.serversLoading && root.vpnState.servers.length === 0
+      visible: (root.showingServers || root.searching) && root.vpnState &&
+        !root.vpnState.locationsLoading && !root.vpnState.serversLoading &&
+        !root.vpnState.serverLookupLoading && root.vpnState.servers.length === 0
+        && (!root.searching || root.searchResults.length === 0)
       width: parent.width
-      text: root.label('no_servers_found')
+      text: root.searching ? root.label('no_locations_found') : root.label('no_servers_found')
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall
@@ -509,7 +1024,8 @@ Item {
     }
 
     Text {
-      visible: root.vpnState && root.vpnState.serversLoading
+      visible: root.vpnState &&
+        (root.vpnState.serversLoading || root.vpnState.serverLookupLoading)
       width: parent.width
       text: root.label('loading_servers')
       color: root.dim

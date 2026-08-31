@@ -23,18 +23,43 @@ Item {
   function label(key) { return strings ? strings.text(key) : key }
 
   function refresh() {
-    if (vpnState && vpnState.signedIn) vpnState.loadRecents(0)
+    if (!vpnState || !vpnState.signedIn) return
+    vpnState.loadProfiles(0)
+    vpnState.loadRecents(0)
+  }
+
+  function recentProfile(recent) {
+    if (!vpnState || !recent || String(recent.kind || '') !== 'profile')
+      return null
+    var profileId = String(recent.profileId || '')
+    for (var index = 0; index < vpnState.profiles.length; ++index) {
+      var profile = vpnState.profiles[index]
+      if (String(profile.id || '') === profileId) return profile
+    }
+    return null
   }
 
   function recentIconName(recent) {
-    if (recent && recent.pinned) return 'star_filled'
     switch (String(recent && recent.kind || '')) {
-    case 'profile': return 'window_terminal'
-    case 'gateway':
-    case 'gatewayServer': return 'servers'
+    case 'profile': return recentProfile(recent) ? '' : 'window_terminal'
     case 'secureCore': return 'locks'
+    case 'tor': return 'brand_tor'
+    default: return String(recent && recent.countryCode || '') === ''
+      ? 'clock_rotate_left' : ''
+    }
+  }
+
+  function recentSpecialFlag(recent) {
+    switch (String(recent && recent.kind || '')) {
+    case 'gateway':
+    case 'gatewayServer': return 'Gateway'
     default: return ''
     }
+  }
+
+  function recentFlagCode(recent) {
+    if (recentSpecialFlag(recent) !== '' || recentProfile(recent)) return ''
+    return String(recent && recent.countryCode || '')
   }
 
   function isDefault(recent) {
@@ -104,6 +129,7 @@ Item {
 
       delegate: Item {
         required property var modelData
+        readonly property var resolvedProfile: root.recentProfile(modelData)
         width: ListView.view.width
         height: recentRow.implicitHeight
 
@@ -114,8 +140,14 @@ Item {
           rowForeground: root.foreground
           rowFontFamily: root.fontFamily
           iconName: root.recentIconName(modelData)
-          iconText: root.recentIconName(modelData) === ''
-            ? String(modelData.countryCode || '') : ''
+          specialFlag: root.recentSpecialFlag(modelData)
+          flagCode: root.recentFlagCode(modelData)
+          entryFlagCode: String(modelData.kind || '') === 'secureCore'
+            ? String(modelData.entryCountryCode || '') : ''
+          profileIconName: parent.resolvedProfile
+            ? String(parent.resolvedProfile.iconName || 'Speed') : ''
+          profileIconColor: parent.resolvedProfile
+            ? String(parent.resolvedProfile.color || '#C857E7') : '#C857E7'
           title: String(modelData.header || modelData.countryName || modelData.serverName || '')
           subtitle: String(modelData.description || modelData.city || root.label('saved_connection'))
           detailIconName: root.isDefault(modelData) ? 'checkmark' : 'play'

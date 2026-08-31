@@ -66,7 +66,7 @@ Panel {
 
   ProtonStrings {
     id: strings
-    localeName: panelRoot.vpnState ? panelRoot.vpnState.locale : 'es-MX'
+    localeName: panelRoot.vpnState ? panelRoot.vpnState.locale : 'en'
   }
 
   function isRoot(candidate) {

@@ -14,10 +14,18 @@ CursorSurface {
   property string iconText: ''
   property string iconName: ''
   property url iconSource: ''
+  property string flagCode: ''
+  property string entryFlagCode: ''
+  property string specialFlag: ''
+  property string profileIconName: ''
+  property color profileIconColor: '#C857E7'
+  property color flagBackground: Color.popups.background
   property bool iconTint: true
   property real iconSize: Style.font.iconLarge
+  property real iconWidth: iconSize
   property string title: ''
   property string subtitle: ''
+  property bool subtitleWrap: false
   property string detail: ''
   property string detailIconName: ''
   property bool toggleVisible: false
@@ -28,6 +36,17 @@ CursorSurface {
   property color dimForeground: Qt.darker(rowForeground, 1.55)
   property color iconForeground: checked ? Color.accent : dimForeground
   property string rowFontFamily: Style.font.family
+  readonly property bool hasProfileIcon: profileIconName !== ''
+  readonly property bool hasFlag: flagCode !== '' || specialFlag !== ''
+  readonly property bool hasComplexFlag: flagCode !== '' && entryFlagCode !== ''
+  readonly property bool hasGenericIcon: iconName !== '' ||
+    String(iconSource).length > 0
+  readonly property real resolvedIconWidth: hasProfileIcon ? Style.space(30)
+    : hasComplexFlag ? Style.space(30)
+    : hasFlag ? Style.space(30) : iconWidth
+  readonly property real resolvedIconHeight: hasProfileIcon ? Style.space(20)
+    : hasComplexFlag ? Style.space(24)
+    : hasFlag ? Style.space(specialFlag !== '' ? 20 : 16) : iconSize
 
   signal activated()
   signal hovered()
@@ -53,21 +72,48 @@ CursorSurface {
     spacing: Style.space(9)
 
     Item {
-      Layout.preferredWidth: Style.space(24)
-      Layout.preferredHeight: root.iconSize
+      Layout.preferredWidth: Math.max(Style.space(24), root.resolvedIconWidth)
+      Layout.preferredHeight: Math.max(Style.space(20), root.resolvedIconHeight)
       Layout.alignment: Qt.AlignVCenter
 
+      ProtonComponents.ProtonProfileIcon {
+        visible: root.hasProfileIcon
+        anchors.centerIn: parent
+        category: root.profileIconName
+        profileColor: root.profileIconColor
+      }
+
+      ProtonComponents.ProtonFlag {
+        visible: !root.hasProfileIcon && root.hasFlag && !root.hasComplexFlag
+        width: Style.space(30)
+        height: Style.space(20)
+        anchors.centerIn: parent
+        countryCode: root.flagCode
+        specialName: root.specialFlag
+        backgroundColor: root.flagBackground
+      }
+
+      ProtonComponents.ProtonComplexFlag {
+        visible: !root.hasProfileIcon && root.hasComplexFlag
+        anchors.centerIn: parent
+        exitCountryCode: root.flagCode
+        entryCountryCode: root.entryFlagCode
+        backgroundColor: root.flagBackground
+      }
+
       ProtonComponents.ProtonMobileIcon {
+        visible: !root.hasProfileIcon && !root.hasFlag && root.hasGenericIcon
         anchors.centerIn: parent
         iconName: root.iconName
         sourceOverride: root.iconSource
         iconColor: root.iconForeground
         iconSize: root.iconSize
+        iconWidth: root.iconWidth
         tint: root.iconTint
       }
 
       Text {
-        visible: root.iconName === '' && String(root.iconSource).length === 0
+        visible: !root.hasProfileIcon && !root.hasFlag && !root.hasGenericIcon
         anchors.fill: parent
         text: root.iconText
         color: root.iconForeground
@@ -98,7 +144,8 @@ CursorSurface {
         color: root.dimForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.caption
-        elide: Text.ElideRight
+        wrapMode: root.subtitleWrap ? Text.WordWrap : Text.NoWrap
+        elide: root.subtitleWrap ? Text.ElideNone : Text.ElideRight
       }
     }
 

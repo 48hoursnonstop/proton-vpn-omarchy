@@ -30,6 +30,34 @@ Item {
     vpnState.loadRecents(0)
   }
 
+  function recentProfile(recent) {
+    if (!vpnState || !recent || String(recent.kind || '') !== 'profile')
+      return null
+    var profileId = String(recent.profileId || '')
+    for (var index = 0; index < vpnState.profiles.length; ++index) {
+      var profile = vpnState.profiles[index]
+      if (String(profile.id || '') === profileId) return profile
+    }
+    return null
+  }
+
+  function recentSpecialFlag(recent) {
+    switch (String(recent && recent.kind || '')) {
+    case 'gateway':
+    case 'gatewayServer': return 'Gateway'
+    default: return ''
+    }
+  }
+
+  function recentFallbackIcon(recent) {
+    var kind = String(recent && recent.kind || '')
+    if (kind === 'profile') return recentProfile(recent) ? '' : 'window_terminal'
+    if (kind === 'secureCore') return 'locks'
+    if (kind === 'tor') return 'brand_tor'
+    return String(recent && recent.countryCode || '') === ''
+      ? 'clock_rotate_left' : ''
+  }
+
   onVisibleChanged: if (visible) refresh()
   Component.onCompleted: if (visible) refresh()
 
@@ -58,9 +86,9 @@ Item {
 
     Repeater {
       model: [
-        { type: 'fastest', icon: 'bolt', title: root.label('fastest_server') },
-        { type: 'random', icon: 'arrows_rotate', title: root.label('random_server') },
-        { type: 'last', icon: 'clock_rotate_left', title: root.label('last_connection') }
+        { type: 'fastest', flag: 'Fastest', title: root.label('fastest_server') },
+        { type: 'random', flag: 'Random', title: root.label('random_country') },
+        { type: 'last', flag: 'Latest', title: root.label('last_connection') }
       ]
 
       delegate: PanelActionRow {
@@ -68,7 +96,7 @@ Item {
         width: root.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: String(modelData.icon)
+        specialFlag: String(modelData.flag)
         title: String(modelData.title)
         subtitle: root.selected(String(modelData.type), '', '')
           ? root.label('default_connection_active') : ''
@@ -102,7 +130,8 @@ Item {
         width: ListView.view.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: 'window_terminal'
+        profileIconName: String(modelData.iconName || 'Speed')
+        profileIconColor: String(modelData.color || '#C857E7')
         title: String(modelData.name || '')
         subtitle: root.label('target_' + String(modelData.targetKind || 'fastest'))
         detailIconName: root.selected('profile', 'profileId', modelData.id)
@@ -134,10 +163,20 @@ Item {
 
       delegate: PanelActionRow {
         required property var modelData
+        readonly property var resolvedProfile: root.recentProfile(modelData)
         width: ListView.view.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: modelData.pinned ? 'star_filled' : 'clock_rotate_left'
+        iconName: root.recentFallbackIcon(modelData)
+        specialFlag: root.recentSpecialFlag(modelData)
+        flagCode: root.recentSpecialFlag(modelData) === '' &&
+          !resolvedProfile ? String(modelData.countryCode || '') : ''
+        entryFlagCode: String(modelData.kind || '') === 'secureCore'
+          ? String(modelData.entryCountryCode || '') : ''
+        profileIconName: resolvedProfile
+          ? String(resolvedProfile.iconName || 'Speed') : ''
+        profileIconColor: resolvedProfile
+          ? String(resolvedProfile.color || '#C857E7') : '#C857E7'
         title: String(modelData.header || modelData.serverName || '')
         subtitle: String(modelData.description || modelData.city || '')
         detailIconName: root.selected('recent', 'recentId', modelData.id)

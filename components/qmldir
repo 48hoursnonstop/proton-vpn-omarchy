@@ -1,7 +1,13 @@
 PanelActionRow 1.0 PanelActionRow.qml
+ProtonPanelHero 1.0 ProtonPanelHero.qml
 ProtonBottomNavigation 1.0 ProtonBottomNavigation.qml
+ProtonComplexFlag 1.0 ProtonComplexFlag.qml
+ProtonConnectionFlag 1.0 ProtonConnectionFlag.qml
+ProtonProfileConnectionIcon 1.0 ProtonProfileConnectionIcon.qml
+ProtonFlag 1.0 ProtonFlag.qml
 ProtonIconButton 1.0 ProtonIconButton.qml
 ProtonMobileIcon 1.0 ProtonMobileIcon.qml
 ProtonMobileNavIcon 1.0 ProtonMobileNavIcon.qml
 ProtonOptionPicker 1.0 ProtonOptionPicker.qml
 ProtonVpnMark 1.0 ProtonVpnMark.qml
+ProtonProfileIcon 1.0 ProtonProfileIcon.qml

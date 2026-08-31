@@ -14,7 +14,8 @@ Item {
   property color urgent: Color.urgent
   property color dim: Qt.darker(foreground, 1.55)
   property string fontFamily: Style.font.family
-  property string selectedLocale: vpnState ? vpnState.locale : 'es-MX'
+  property string selectedLocale: vpnState
+    ? vpnState.locale : previewStrings.systemLocaleName
   property bool startAtLogin: vpnState ? vpnState.startWithOmarchy : true
   property bool connectAtLogin: vpnState ? vpnState.autoConnect : false
 
@@ -25,8 +26,16 @@ Item {
 
   implicitHeight: content.implicitHeight
 
+  // Onboarding previews its pending language locally. The canonical locale is
+  // persisted only when Continue is pressed, but every visible label reacts
+  // immediately to the picker.
+  ProtonStrings {
+    id: previewStrings
+    localeName: root.selectedLocale
+  }
+
   function label(key) {
-    return strings ? strings.text(key) : key
+    return previewStrings.text(key)
   }
 
   function focusInitial() {
@@ -43,7 +52,7 @@ Item {
     width: parent.width
     spacing: Style.space(12)
 
-    PanelHero {
+    ProtonPanelHero {
       width: parent.width
       title: root.label('welcome_title')
       meta: root.label('welcome_description')
@@ -71,7 +80,7 @@ Item {
 
       ProtonOptionPicker {
         width: parent.width
-        options: root.strings ? root.strings.localeOptions() : []
+        options: previewStrings.localeOptions()
         currentValue: root.selectedLocale
         foreground: root.foreground
         fontFamily: root.fontFamily
@@ -93,6 +102,7 @@ Item {
         iconName: 'arrows_rotate'
         title: root.label('start_with_omarchy')
         subtitle: root.label('start_with_omarchy_description')
+        subtitleWrap: true
         toggleVisible: true
         checked: root.startAtLogin
         onActivated: {
@@ -108,6 +118,7 @@ Item {
         iconName: 'bolt'
         title: root.label('auto_connect')
         subtitle: root.label('auto_connect_description')
+        subtitleWrap: true
         toggleVisible: true
         checked: root.connectAtLogin
         onActivated: {
@@ -148,9 +159,9 @@ Item {
       text: {
         if (!root.vpnState) return root.label('agent_unavailable')
         if (root.storeBusy)
-          return root.strings.operationStage(root.vpnState.operationStage)
+          return previewStrings.operationStage(root.vpnState.operationStage)
         if (root.vpnState.lastError !== '')
-          return root.strings.error(root.vpnState.lastErrorCode, root.vpnState.lastError)
+          return previewStrings.error(root.vpnState.lastErrorCode, root.vpnState.lastError)
         if (root.vpnState.agentConnecting) return root.label('agent_reconnecting')
         if (!root.vpnState.storeReady) return root.label('store_unavailable')
         return ''

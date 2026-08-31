@@ -26,6 +26,8 @@ Item {
   property bool localDnsPickerVisible: false
   property string editingId: ''
   property string targetKind: 'fastest'
+  property string selectionStrategy: 'fastest'
+  property bool excludeMyCountry: false
   property string countryCode: ''
   property string countryName: ''
   property string entryCountryCode: ''
@@ -81,6 +83,7 @@ Item {
 
   function navigateBack() {
     if (pickerVisible) {
+      if (locationPicker.navigateBack()) return true
       pickerVisible = false
       return true
     }
@@ -104,6 +107,8 @@ Item {
     editingId = ''
     nameField.text = ''
     targetKind = 'fastest'
+    selectionStrategy = 'fastest'
+    excludeMyCountry = false
     countryCode = ''
     countryName = ''
     entryCountryCode = ''
@@ -146,6 +151,9 @@ Item {
     editingId = String(profile.id || '')
     nameField.text = String(profile.name || '')
     targetKind = String(profile.targetKind || 'fastest')
+    selectionStrategy = String(profile.selectionStrategy ||
+      (targetKind === 'random' ? 'random' : 'fastest'))
+    excludeMyCountry = !!profile.excludeMyCountry
     countryCode = String(profile.countryCode || '')
     countryName = String(profile.countryName || '')
     entryCountryCode = String(profile.entryCountryCode || '')
@@ -186,15 +194,28 @@ Item {
       : targetKind === 'tor' ? 'tor' : 'standard'
     pickerVisible = true
     Qt.callLater(function() {
-      locationPicker.selectSection(root.pickerSection)
-      locationPicker.selectFeature(root.pickerFeature)
-      locationPicker.refresh()
+      locationPicker.beginSelection({
+        targetKind: root.targetKind,
+        selectionStrategy: root.selectionStrategy,
+        excludeMyCountry: root.excludeMyCountry,
+        countryCode: root.countryCode,
+        countryName: root.countryName,
+        entryCountryCode: root.entryCountryCode,
+        entryCountryName: root.entryCountryName,
+        state: root.state,
+        city: root.city,
+        serverName: root.serverName,
+        gatewayName: root.gatewayName
+      }, root.pickerSection, root.pickerFeature)
     })
   }
 
   function applyLocation(selection) {
     if (!selection) return
     targetKind = String(selection.targetKind || 'fastest')
+    selectionStrategy = String(selection.selectionStrategy ||
+      (targetKind === 'random' ? 'random' : 'fastest'))
+    excludeMyCountry = !!selection.excludeMyCountry
     countryCode = String(selection.countryCode || '')
     countryName = String(selection.countryName || '')
     entryCountryCode = String(selection.entryCountryCode || '')
@@ -209,6 +230,8 @@ Item {
   function targetSummary(profile) {
     var item = profile || {
       targetKind: targetKind,
+      selectionStrategy: selectionStrategy,
+      excludeMyCountry: excludeMyCountry,
       countryCode: countryCode,
       countryName: countryName,
       entryCountryCode: entryCountryCode,
@@ -219,21 +242,63 @@ Item {
       gatewayName: gatewayName
     }
     var kind = String(item.targetKind || 'fastest')
+    var strategy = String(item.selectionStrategy ||
+      (kind === 'random' ? 'random' : 'fastest'))
+    var excludingMine = !!item.excludeMyCountry
     var country = String(item.countryName || item.countryCode || '')
     var entry = String(item.entryCountryName || item.entryCountryCode || '')
     var stateName = String(item.state || '')
     var cityName = String(item.city || '')
     var server = String(item.serverName || '')
     var gateway = String(item.gatewayName || '')
+    if (excludingMine) {
+      if (kind === 'secureCore')
+        return label('fastest_secure_core') + ' · ' + label('excluding_my_country')
+      if (kind === 'p2p')
+        return label('fastest_p2p') + ' · ' + label('excluding_my_country')
+      return label('fastest_country_excluding_my_country')
+    }
     if (kind === 'gateway' || kind === 'gatewayServer')
-      return gateway + (server ? ' · ' + server : '')
+      return gateway + (server ? ' · ' + server : '') +
+        (strategy === 'random' && !server ? ' · ' + label('random_server') : '')
     if (kind === 'secureCore' && entry)
       return entry + ' → ' + (country || server)
-    if (cityName) return cityName + (stateName ? ' · ' + stateName : '')
-    if (stateName) return stateName
+    if (cityName) return cityName + (stateName ? ' · ' + stateName : '') +
+      (strategy === 'random' ? ' · ' + label('random_server') : '')
+    if (stateName) return stateName +
+      (strategy === 'random' ? ' · ' + label('random_server') : '')
     if (server) return (country ? country + ' · ' : '') + server
-    if (country) return country
+    if (country) return country +
+      (strategy === 'random' ? ' · ' + label('random_server') : '')
+    if (strategy === 'random') {
+      if (kind === 'fastest') return label('random_country')
+      if (kind === 'secureCore') return label('random_country') + ' · Secure Core'
+      if (kind === 'p2p') return label('random_country') + ' · P2P'
+      if (kind === 'tor') return label('random_country') + ' · Tor'
+    }
     return label('target_' + kind)
+  }
+
+  function targetSpecialFlag(kind, strategy, excludingMine) {
+    if (excludingMine) return 'Fastest'
+    if (String(strategy || '') === 'random') return 'Random'
+    switch (String(kind || '')) {
+    case 'fastest': return 'Fastest'
+    case 'random': return 'Random'
+    case 'gateway':
+    case 'gatewayServer': return 'Gateway'
+    default: return ''
+    }
+  }
+
+  function targetFallbackIcon(kind, code) {
+    if (targetSpecialFlag(kind) !== '' || String(code || '') !== '') return ''
+    switch (String(kind || '')) {
+    case 'secureCore': return 'locks'
+    case 'p2p': return 'arrow_right_arrow_left'
+    case 'tor': return 'brand_tor'
+    default: return 'map_pin'
+    }
   }
 
   function profileProtocolValue(value) {
@@ -281,22 +346,8 @@ Item {
     }
   }
 
-  function profileIconSource(value) {
-    var asset = 'bolt'
-    switch (String(value || 'Speed')) {
-    case 'Streaming': asset = 'streaming'; break
-    case 'Protection': asset = 'shield'; break
-    case 'Privacy': asset = 'eye'; break
-    case 'Anonymous': asset = 'anonymous'; break
-    case 'Terminal': asset = 'terminal'; break
-    case 'Gaming': asset = 'gaming'; break
-    case 'Download': asset = 'download'; break
-    case 'Business': asset = 'business'; break
-    case 'Shopping': asset = 'shopping'; break
-    case 'Security': asset = 'security'; break
-    case 'Browsing': asset = 'browsing'; break
-    }
-    return Qt.resolvedUrl('assets/mobile/profiles/profile_' + asset + '_icon.webp')
+  function profileIconLabel(value) {
+    return label('profile_icon_' + String(value || 'Speed').toLowerCase())
   }
 
   function connectAndGoValid() {
@@ -344,7 +395,7 @@ Item {
   }
 
   function targetValid() {
-    if (['fastest', 'p2p', 'secureCore', 'tor'].indexOf(targetKind) >= 0)
+    if (['fastest', 'random', 'p2p', 'secureCore', 'tor'].indexOf(targetKind) >= 0)
       return true
     if (targetKind === 'country') return countryCode.length > 0
     if (targetKind === 'state') return countryCode.length > 0 && state.length > 0
@@ -364,6 +415,8 @@ Item {
       iconName: profileIconName,
       color: profileColor,
       targetKind: targetKind,
+      selectionStrategy: selectionStrategy,
+      excludeMyCountry: excludeMyCountry,
       countryCode: countryCode,
       countryName: countryName,
       entryCountryCode: entryCountryCode,
@@ -476,10 +529,10 @@ Item {
         width: parent.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconSource: root.profileIconSource(root.profileIconName)
-        iconTint: false
+        profileIconName: root.profileIconName
+        profileIconColor: root.profileColor
         title: root.label('profile_icon')
-        subtitle: root.profileIconName
+        subtitle: root.profileIconLabel(root.profileIconName)
         detailIconName: 'chevron_right'
         onActivated: root.iconPickerVisible = !root.iconPickerVisible
       }
@@ -518,9 +571,9 @@ Item {
             width: root.width
             rowForeground: root.foreground
             rowFontFamily: root.fontFamily
-            iconSource: root.profileIconSource(modelData)
-            iconTint: false
-            title: modelData
+            profileIconName: modelData
+            profileIconColor: root.profileColor
+            title: root.profileIconLabel(modelData)
             detailIconName: root.profileIconName === modelData ? 'checkmark' : ''
             checked: root.profileIconName === modelData
             onActivated: {
@@ -535,7 +588,14 @@ Item {
         width: parent.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: 'map_pin'
+        iconName: root.targetFallbackIcon(root.targetKind, root.countryCode)
+        specialFlag: root.targetSpecialFlag(root.targetKind,
+          root.selectionStrategy, root.excludeMyCountry)
+        flagCode: root.targetSpecialFlag(root.targetKind,
+          root.selectionStrategy, root.excludeMyCountry) === ''
+          ? root.countryCode : ''
+        entryFlagCode: root.targetKind === 'secureCore'
+          ? root.entryCountryCode : ''
         title: root.label('profile_target')
         subtitle: root.targetSummary(null)
         detailIconName: 'chevron_right'
@@ -548,8 +608,8 @@ Item {
         rowFontFamily: root.fontFamily
         iconName: 'servers'
         title: root.label('protocol')
-        subtitle: root.vpnState
-          ? root.vpnState.protocolName(root.profileProtocol)
+        subtitle: root.strings
+          ? root.strings.protocolName(root.profileProtocol)
           : root.profileProtocol
         detailIconName: 'chevron_right'
         onActivated: root.protocolPickerVisible = !root.protocolPickerVisible
@@ -569,8 +629,8 @@ Item {
             rowForeground: root.foreground
             rowFontFamily: root.fontFamily
             iconName: root.protocolIcon(modelData)
-            title: root.vpnState
-              ? root.vpnState.protocolName(modelData) : modelData
+            title: root.strings
+              ? root.strings.protocolName(modelData) : modelData
             detailIconName: root.profileProtocol === modelData ? 'checkmark' : ''
             checked: root.profileProtocol === modelData
             onActivated: {
@@ -586,7 +646,7 @@ Item {
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
         iconName: 'shield_2_bolt'
-        title: 'NetShield'
+        title: root.label('netshield')
         subtitle: root.netShieldEnabled ? root.label('enabled') : root.label('disabled')
         toggleVisible: true
         checked: root.netShieldEnabled
@@ -770,7 +830,7 @@ Item {
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
         iconName: 'arrow_out_square'
-        title: 'Connect and Go'
+        title: root.label('connect_and_go')
         subtitle: root.connectAndGoMode === 'website'
           ? root.label('open_website')
           : root.connectAndGoMode === 'application'
@@ -845,6 +905,7 @@ Item {
         }
 
         ListView {
+          id: connectAndGoAppsList
           visible: root.connectAndGoMode === 'application' &&
             root.connectAndGoAppPickerVisible
           width: parent.width
@@ -854,6 +915,10 @@ Item {
           boundsBehavior: Flickable.StopAtBounds
           model: root.vpnState ? root.vpnState.installedApps : []
           spacing: Style.space(2)
+          onContentYChanged: {
+            if (root.vpnState && contentY + height >= contentHeight - Style.space(80))
+              root.vpnState.loadMoreApps()
+          }
 
           delegate: PanelActionRow {
             required property var modelData
@@ -951,7 +1016,12 @@ Item {
       spacing: Style.space(2)
 
       delegate: Item {
+        id: profileDelegate
         required property var modelData
+        readonly property bool activeProfile: root.vpnState &&
+          root.vpnState.connected &&
+          String(root.vpnState.activeProfileId || '') !== '' &&
+          String(root.vpnState.activeProfileId) === String(modelData.id || '')
         width: ListView.view.width
         height: row.implicitHeight
 
@@ -961,14 +1031,16 @@ Item {
           anchors.right: editButton.left
           rowForeground: root.foreground
           rowFontFamily: root.fontFamily
-          iconSource: root.profileIconSource(modelData.iconName)
-          iconTint: false
+          profileIconName: String(modelData.iconName || 'Speed')
+          profileIconColor: String(modelData.color || '#C857E7')
           title: String(modelData.name || '')
           subtitle: root.targetSummary(modelData)
-          detailIconName: 'play'
+          detailIconName: profileDelegate.activeProfile ? 'checkmark' : 'play'
+          checked: profileDelegate.activeProfile
           enabled: root.vpnState && !root.vpnState.tunnelOperationBusy
           busy: root.vpnState && root.vpnState.tunnelOperationBusy
-          onActivated: root.vpnState.connectProfile(modelData)
+          onActivated: if (!profileDelegate.activeProfile)
+            root.vpnState.connectProfile(modelData)
         }
 
         ProtonIconButton {
@@ -996,7 +1068,7 @@ Item {
     }
 
     Column {
-      visible: root.deleteCandidateId.length > 0
+      visible: !root.pickerVisible && root.deleteCandidateId.length > 0
       width: parent.width
       spacing: Style.space(6)
 
@@ -1024,7 +1096,7 @@ Item {
     }
 
     Button {
-      visible: root.editing && root.editingId.length > 0 &&
+      visible: root.editing && !root.pickerVisible && root.editingId.length > 0 &&
         root.deleteCandidateId.length === 0
       width: parent.width
       text: root.label('delete_profile')

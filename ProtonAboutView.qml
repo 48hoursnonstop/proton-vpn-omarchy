@@ -22,7 +22,7 @@ Item {
     width: parent.width
     spacing: Style.space(8)
 
-    PanelHero {
+    ProtonPanelHero {
       width: parent.width
       title: 'Proton VPN for Omarchy'
       meta: root.label('about_description')

@@ -100,7 +100,7 @@ Item {
     width: parent.width
     spacing: Style.space(12)
 
-    PanelHero {
+    ProtonPanelHero {
       width: parent.width
       title: root.twoFactor
         ? (root.securityKeyMode

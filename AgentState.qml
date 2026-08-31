@@ -2,6 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "i18n/Catalogs.js" as Catalogs
+import "i18n/Search.js" as Search
 
 // Per-user Rust agent adapter. The Rust agent owns shared state while the
 // official Proton Linux core owns every VPN and protection mutation.
@@ -64,7 +66,7 @@ QtObject {
   property bool storeReady: false
   property int storeRevision: 0
   property bool onboardingComplete: false
-  property string locale: 'es-MX'
+  property string locale: Catalogs.preferredLocale(Qt.locale().name || 'en')
   property bool startWithOmarchy: true
   property bool autoConnect: false
   property bool notificationsEnabled: true
@@ -83,6 +85,7 @@ QtObject {
   property var servers: []
   property var installedApps: []
   property int installedAppTotal: 0
+  readonly property int installedAppPageSize: 100
   property string desiredAppQuery: ''
   readonly property bool appsLoading: requestPending('apps.get')
   property var reportCategories: []
@@ -95,16 +98,23 @@ QtObject {
   readonly property bool reportCategoriesLoading: requestPending('report_issue.categories.get')
   readonly property bool diagnosticsLoading: requestPending('diagnostics.get')
   property int serverTotal: 0
+  readonly property int serverPageSize: 100
   property string desiredServerQuery: ''
   property string desiredServerCountry: ''
   property string desiredServerGateway: ''
   property string desiredServerFeature: ''
+  property string desiredServerScope: ''
+  property string desiredServerLookupQuery: ''
+  property var remoteSearchServer: null
   readonly property bool locationsLoading: requestPending('locations.get')
   readonly property bool serversLoading: requestPending('servers.get')
+  readonly property bool serverLookupLoading: requestPending('servers.lookup')
 
   property int revision: 0
   property string status: 'unknown'
+  property string activeProfileId: ''
   property string countryCode: ''
+  property string entryCountryCode: ''
   property string countryName: ''
   property string city: ''
   property string serverName: ''
@@ -400,7 +410,8 @@ QtObject {
 
   function isSilentBackgroundMethod(method) {
     var value = String(method || '')
-    return value === 'traffic.get' || value === 'netshield.stats.get'
+    return value === 'traffic.get' || value === 'netshield.stats.get' ||
+      value === 'servers.lookup'
   }
 
   function requestPending(method) {
@@ -429,24 +440,6 @@ QtObject {
         return true
     }
     return false
-  }
-
-  function protocolName(value) {
-    switch (String(value || '').toLowerCase()) {
-    case 'smart':
-    case 'protun-smart': return 'Smart'
-    case 'wireguard':
-    case 'wireguard-udp': return 'WireGuard'
-    case 'wireguard-tcp': return 'WireGuard TCP'
-    case 'wireguard-tls': return 'Stealth'
-    case 'protun-udp': return 'WireGuard UDP'
-    case 'protun-tcp': return 'WireGuard TCP'
-    case 'protun-tls': return 'Stealth'
-    case 'openvpn': return 'OpenVPN'
-    case 'openvpn-udp': return 'OpenVPN UDP'
-    case 'openvpn-tcp': return 'OpenVPN TCP'
-    default: return String(value || '')
-    }
   }
 
   function localStageForMethod(method) {
@@ -771,7 +764,7 @@ QtObject {
 
   function completeOnboarding(selectedLocale, startAtLogin, connectAtLogin) {
     return send('onboarding.complete', {
-      locale: String(selectedLocale || 'es-MX'),
+      locale: String(selectedLocale || locale || 'en'),
       start_with_omarchy: !!startAtLogin,
       auto_connect: !!connectAtLogin
     })
@@ -850,18 +843,54 @@ QtObject {
     return send('locations.get', {})
   }
 
-  function loadServers(query, countryCode, gatewayName, feature) {
-    desiredServerQuery = String(query || '').trim().toLowerCase()
-    desiredServerCountry = String(countryCode || '').trim().toUpperCase()
-    desiredServerGateway = String(gatewayName || '').trim()
-    desiredServerFeature = String(feature || '').trim().toLowerCase()
+  function loadServers(query, countryCode, gatewayName, feature, scope) {
+    var nextQuery = Search.normalize(query)
+    var nextCountry = String(countryCode || '').trim().toUpperCase()
+    var nextGateway = String(gatewayName || '').trim()
+    var nextFeature = String(feature || '').trim().toLowerCase()
+    var nextScope = String(scope || '').trim().toLowerCase()
+    if (nextQuery !== desiredServerQuery || nextCountry !== desiredServerCountry ||
+        nextGateway !== desiredServerGateway || nextFeature !== desiredServerFeature ||
+        nextScope !== desiredServerScope) {
+      servers = []
+      serverTotal = 0
+      remoteSearchServer = null
+      desiredServerLookupQuery = ''
+    }
+    desiredServerQuery = nextQuery
+    desiredServerCountry = nextCountry
+    desiredServerGateway = nextGateway
+    desiredServerFeature = nextFeature
+    desiredServerScope = nextScope
     return send('servers.get', {
       offset: 0,
-      limit: 100,
+      limit: serverPageSize,
       query: desiredServerQuery,
       country_code: desiredServerCountry,
       gateway_name: desiredServerGateway,
-      feature: desiredServerFeature
+      feature: desiredServerFeature,
+      scope: desiredServerScope
+    })
+  }
+
+  function lookupServer(query) {
+    var canonical = Search.canonicalServerLookup(query)
+    if (!canonical || !supportsMethod('servers.lookup')) return ''
+    desiredServerLookupQuery = canonical
+    remoteSearchServer = null
+    return send('servers.lookup', { query: canonical })
+  }
+
+  function loadMoreServers() {
+    if (serversLoading || servers.length >= serverTotal) return ''
+    return send('servers.get', {
+      offset: servers.length,
+      limit: serverPageSize,
+      query: desiredServerQuery,
+      country_code: desiredServerCountry,
+      gateway_name: desiredServerGateway,
+      feature: desiredServerFeature,
+      scope: desiredServerScope
     })
   }
 
@@ -1007,8 +1036,24 @@ QtObject {
   }
 
   function loadApps(query) {
-    desiredAppQuery = String(query || '').trim().toLowerCase()
-    return send('apps.get', { offset: 0, limit: 100, query: desiredAppQuery })
+    var nextQuery = String(query || '').trim().toLowerCase()
+    if (nextQuery !== desiredAppQuery) {
+      installedApps = []
+      installedAppTotal = 0
+    }
+    desiredAppQuery = nextQuery
+    return send('apps.get', {
+      offset: 0, limit: installedAppPageSize, query: desiredAppQuery
+    })
+  }
+
+  function loadMoreApps() {
+    if (appsLoading || installedApps.length >= installedAppTotal) return ''
+    return send('apps.get', {
+      offset: installedApps.length,
+      limit: installedAppPageSize,
+      query: desiredAppQuery
+    })
   }
 
   function applySplitTunneling(enabled, mode, standardApps, inverseApps,
@@ -1292,14 +1337,28 @@ QtObject {
         connectionObservationRequested = false
         maybeRunQueuedAction()
       }
-      else if (message.result && completedMethod === 'profiles.list')
-        profiles = Array.isArray(message.result.items) ? message.result.items : []
+      else if (message.result && completedMethod === 'profiles.list') {
+        if (Number(message.result.store_revision || 0) !== storeRevision) return
+        var profilePage = Array.isArray(message.result.items) ? message.result.items : []
+        var profileOffset = Number(message.result.offset || 0)
+        if (profileOffset === 0) profiles = profilePage
+        else if (profileOffset === profiles.length) profiles = profiles.concat(profilePage)
+        if (message.result.has_more && profilePage.length > 0)
+          loadProfiles(profileOffset + profilePage.length)
+      }
       else if (message.result && completedMethod === 'excluded_locations.get')
         excludedLocations = Array.isArray(message.result.items) ? message.result.items : []
       else if (message.result && completedMethod === 'excluded_locations.set')
         excludedLocations = Array.isArray(message.result.items) ? message.result.items : []
-      else if (message.result && completedMethod === 'recents.list')
-        recents = Array.isArray(message.result.items) ? message.result.items : []
+      else if (message.result && completedMethod === 'recents.list') {
+        if (Number(message.result.store_revision || 0) !== storeRevision) return
+        var recentPage = Array.isArray(message.result.items) ? message.result.items : []
+        var recentOffset = Number(message.result.offset || 0)
+        if (recentOffset === 0) recents = recentPage
+        else if (recentOffset === recents.length) recents = recents.concat(recentPage)
+        if (message.result.has_more && recentPage.length > 0)
+          loadRecents(recentOffset + recentPage.length)
+      }
       else if (message.result && completedMethod === 'connection.resolve') {
         if (!defaultConnectCancelRequested) {
           var connectParams = message.result.connect_params || {}
@@ -1326,12 +1385,22 @@ QtObject {
         var responseCountry = String(message.result.country_code || '')
         var responseGateway = String(message.result.gateway_name || '')
         var responseFeature = String(message.result.feature || '')
+        var responseScope = String(message.result.scope || '')
         if (responseQuery === desiredServerQuery && responseCountry === desiredServerCountry &&
             responseGateway === desiredServerGateway &&
-            responseFeature === desiredServerFeature) {
-          servers = Array.isArray(message.result.servers) ? message.result.servers : []
+            responseFeature === desiredServerFeature && responseScope === desiredServerScope) {
+          var responseServers = Array.isArray(message.result.servers)
+            ? message.result.servers : []
+          var responseOffset = Number(message.result.offset || 0)
+          if (responseOffset === 0)
+            servers = responseServers
+          else if (responseOffset === servers.length)
+            servers = servers.concat(responseServers)
           serverTotal = Number(message.result.total || 0)
         }
+      } else if (message.result && completedMethod === 'servers.lookup') {
+        if (String(message.result.query || '') === desiredServerLookupQuery)
+          remoteSearchServer = message.result.server || null
       } else if (message.result && completedMethod === 'traffic.get') {
         trafficKnown = !!message.result.known
         downloadBytes = Number(message.result.download_bytes || 0)
@@ -1347,7 +1416,11 @@ QtObject {
         lastErrorRetryable = false
       } else if (message.result && completedMethod === 'apps.get') {
         if (String(message.result.query || '') === desiredAppQuery) {
-          installedApps = Array.isArray(message.result.apps) ? message.result.apps : []
+          var responseApps = Array.isArray(message.result.apps) ? message.result.apps : []
+          var appOffset = Number(message.result.offset || 0)
+          if (appOffset === 0) installedApps = responseApps
+          else if (appOffset === installedApps.length)
+            installedApps = installedApps.concat(responseApps)
           installedAppTotal = Number(message.result.total || 0)
         }
       } else if (message.result && completedMethod === 'report_issue.categories.get') {
@@ -1418,12 +1491,14 @@ QtObject {
     var connection = snapshot.connection || {}
     connectionObservationKnown = !!connection.observation_known
     status = String(connection.status || 'unknown')
+    activeProfileId = String(connection.profile_id || '')
     countryCode = connection.country_code || ''
+    entryCountryCode = connection.entry_country_code || ''
     countryName = connection.country_name || ''
     city = connection.city || ''
     serverName = connection.server_name || ''
     serverIp = connection.server_ip || ''
-    protocol = protocolName(connection.protocol)
+    protocol = String(connection.protocol || '')
     connectionErrorCode = String(connection.error_code || '')
     networkConflicts = Array.isArray(connection.network_conflicts)
       ? connection.network_conflicts : []
@@ -1569,7 +1644,9 @@ QtObject {
     storeReady = !!store.ready
     storeRevision = Number(store.revision || 0)
     onboardingComplete = !!store.onboarding_complete
-    locale = String(store.locale || 'es-MX')
+    locale = onboardingComplete
+      ? Catalogs.preferredLocale(store.locale || 'en')
+      : Catalogs.preferredLocale(Qt.locale().name || 'en')
     startWithOmarchy = store.start_with_omarchy === undefined
       ? true : !!store.start_with_omarchy
     autoConnect = !!store.auto_connect

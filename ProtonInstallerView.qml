@@ -35,7 +35,7 @@ Item {
     width: parent.width
     spacing: Style.space(12)
 
-    PanelHero {
+    ProtonComponents.ProtonPanelHero {
       width: parent.width
       title: root.repairing
         ? root.label('repair_backend_title')

@@ -126,7 +126,7 @@ Item {
           anchors.right: removeButton.left
           rowForeground: root.foreground
           rowFontFamily: root.fontFamily
-          iconName: modelData.kind === 'country' ? 'earth' : 'map_pin'
+          flagCode: String(modelData.country_code || '')
           title: root.excludedLabel(modelData)
           subtitle: root.label('excluded_' + String(modelData.kind || 'country'))
           enabled: false
@@ -167,13 +167,20 @@ Item {
       }
     }
 
-    Repeater {
+    ListView {
+      visible: root.selectedCountry === null
+      width: parent.width
+      height: Math.min(contentHeight, Style.space(410))
+      implicitHeight: height
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
       model: root.selectedCountry === null && root.vpnState
         ? root.vpnState.countries : []
+      spacing: Style.space(2)
 
       delegate: Item {
         required property var modelData
-        width: root.width
+        width: ListView.view.width
         height: countryRow.implicitHeight
 
         PanelActionRow {
@@ -182,7 +189,7 @@ Item {
           anchors.right: addCountryButton.left
           rowForeground: root.foreground
           rowFontFamily: root.fontFamily
-          iconName: 'earth'
+          flagCode: String(modelData.code || '')
           title: String(modelData.name || modelData.code || '')
           subtitle: String(modelData.code || '')
           detailIconName: (modelData.states && modelData.states.length > 0) ||
@@ -225,7 +232,8 @@ Item {
           anchors.right: addStateButton.left
           rowForeground: root.foreground
           rowFontFamily: root.fontFamily
-          iconName: 'map_pin'
+          flagCode: root.selectedCountry
+            ? String(root.selectedCountry.code || '') : ''
           title: String(modelData.name || '')
           subtitle: root.label('excluded_state')
           detailIconName: modelData.cities && modelData.cities.length > 0
@@ -260,7 +268,8 @@ Item {
         width: root.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: 'map_pin'
+        flagCode: root.selectedCountry
+          ? String(root.selectedCountry.code || '') : ''
         title: modelData
         detailIconName: 'plus'
         enabled: root.vpnState && !root.vpnState.storeOperationBusy
@@ -281,7 +290,8 @@ Item {
         width: root.width
         rowForeground: root.foreground
         rowFontFamily: root.fontFamily
-        iconName: 'map_pin'
+        flagCode: root.selectedCountry
+          ? String(root.selectedCountry.code || '') : ''
         title: modelData
         detailIconName: 'plus'
         enabled: root.vpnState && !root.vpnState.storeOperationBusy

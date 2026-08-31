@@ -39,7 +39,7 @@ Item {
       var value = String(values[index])
       output.push({
         value: value,
-        label: vpnState.protocolName(value),
+        label: strings.protocolName(value),
         iconName: value.indexOf('openvpn') === 0 ? 'globe'
           : value === 'protun-tls' || value === 'wireguard-tls' ? 'shield'
           : value === 'smart' || value === 'protun-smart' ? 'sliders'
@@ -113,7 +113,7 @@ Item {
       iconName: 'servers'
       title: root.label('protocol')
       subtitle: root.vpnState
-        ? root.vpnState.protocolName(root.vpnState.selectedProtocol) : ''
+        ? root.strings.protocolName(root.vpnState.selectedProtocol) : ''
       detailIconName: root.vpnState && root.vpnState.protocolWritable
         ? 'chevron_right' : 'minus_circle_filled'
       enabled: root.vpnState && root.vpnState.protocolWritable
@@ -141,7 +141,7 @@ Item {
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
       iconName: 'kill_switch'
-      title: 'Kill Switch'
+      title: root.label('kill_switch')
       subtitle: root.vpnState ? root.label('kill_switch_' + root.vpnState.killSwitchMode) : ''
       detailIconName: root.vpnState && root.vpnState.killSwitchWritable
         ? 'chevron_right' : 'minus_circle_filled'
@@ -170,7 +170,7 @@ Item {
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
       iconName: 'shield_2_bolt'
-      title: 'NetShield'
+      title: root.label('netshield')
       subtitle: root.vpnState ? root.label('netshield_level_' + root.vpnState.netShieldLevel) : ''
       detailIconName: root.vpnState && root.vpnState.netShieldWritable
         ? 'chevron_right' : 'minus_circle_filled'
@@ -199,7 +199,7 @@ Item {
       rowForeground: root.foreground
       rowFontFamily: root.fontFamily
       iconName: 'rocket'
-      title: 'VPN Accelerator'
+      title: root.label('vpn_accelerator')
       subtitle: root.vpnState && root.vpnState.vpnAccelerator
         ? root.label('enabled') : root.label('disabled')
       toggleVisible: true
@@ -480,7 +480,7 @@ Item {
       visible: root.openPicker === 'language'
       width: parent.width
       options: root.languageOptions()
-      currentValue: root.vpnState ? root.vpnState.locale : 'es-MX'
+      currentValue: root.vpnState ? root.vpnState.locale : 'en'
       foreground: root.foreground
       fontFamily: root.fontFamily
       busy: root.storeBusy

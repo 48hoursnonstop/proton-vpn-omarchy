@@ -24,3 +24,19 @@ registerLocale(
 
 The agent persists any bounded, syntactically valid BCP 47 tag. Until a catalog
 for that tag ships, the frontend and native notifications fall back to English.
+
+`CountryNames.js` is the parallel territory-name registry used for display and
+search aliases. English comes from the backend's ISO 3166 catalog; each new UI
+language adds a map keyed by two-letter territory code. The Spanish map was
+generated from iso-codes 4.20.1's `iso_3166-1` catalog (LGPL-2.1-or-later).
+Keep the canonical English fallback in every alias list so users may search in
+either the selected language or English, matching Proton Android's behavior.
+
+## Proton terminology
+
+Labels and descriptions that have a direct equivalent in Proton's Windows
+client use the `en-US` and `es-419` values from `ProtonVPN/win-app` commit
+`4d9ac60d1db5d3f2908498470a9d1646723afcfd`. Omarchy-specific copy has no
+upstream equivalent and remains maintained here. Keep those two groups
+separate when refreshing a catalog so a coincidentally similar phrase is not
+assigned the wrong UI context.

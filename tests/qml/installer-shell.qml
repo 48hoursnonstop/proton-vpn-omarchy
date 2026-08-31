@@ -53,7 +53,7 @@ ShellRoot {
       console.log('INSTALLER_QML', installer.packageKnown,
                   installer.canStart, installerView.implicitHeight > 0,
                   installer.scriptPath.endsWith('/scripts/install-backend'),
-                  strings.text('welcome_title') === 'Bienvenido a Proton VPN',
+                  strings.text('welcome_title') === 'Le damos la bienvenida a Proton VPN',
                   englishStrings.text('welcome_title') === 'Welcome to Proton VPN',
                   strings.localeOptions().length === 2,
                   strings.profileCopyName('Test') === 'Copia de Test',

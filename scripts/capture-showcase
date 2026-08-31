@@ -8,7 +8,13 @@ output_dir="${1:-$root/docs/screenshots}"
 qpa_platform="${PROTON_SHOWCASE_QPA_PLATFORM:-wayland}"
 host_runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 only_route="${PROTON_SHOWCASE_ONLY:-}"
+capture_scale="${PROTON_SHOWCASE_SCALE:-1}"
 capture_count=0
+
+[[ $capture_scale =~ ^[1-4]$ ]] || {
+  printf 'SHOWCASE: PROTON_SHOWCASE_SCALE must be an integer from 1 to 4\n' >&2
+  exit 2
+}
 
 command -v quickshell >/dev/null 2>&1 || {
   printf 'SHOWCASE: quickshell is unavailable\n' >&2
@@ -81,6 +87,7 @@ capture() {
       XDG_CONFIG_HOME="$capture_home/.config" \
       XDG_RUNTIME_DIR="$runtime_dir" \
       QT_QPA_PLATFORM="$qpa_platform" \
+      QT_SCALE_FACTOR="$capture_scale" \
       PROTON_SHOWCASE_ROUTE="$route" \
       PROTON_SHOWCASE_OUTPUT="$destination" \
       quickshell --no-color -p "$qml_root" 2>&1
@@ -118,5 +125,16 @@ capture locations catppuccin countries-catppuccin.png
 capture profiles catppuccin profiles-catppuccin.png
 capture details catppuccin connection-details-catppuccin.png
 capture settings catppuccin settings-catppuccin.png
+
+# Extra regression surfaces stay opt-in so the publication set above does not
+# grow every time a secondary page gains coverage.
+if [[ $only_route == default ]]; then
+  showcase_theme="${PROTON_SHOWCASE_THEME:-catppuccin}"
+  capture default "$showcase_theme" "default-connection-$showcase_theme.png"
+fi
+if [[ $only_route == home-standard ]]; then
+  showcase_theme="${PROTON_SHOWCASE_THEME:-catppuccin}"
+  capture home-standard "$showcase_theme" "home-standard-$showcase_theme.png"
+fi
 
 printf 'SHOWCASE: PASS (%d sanitized production-UI captures)\n' "$capture_count"

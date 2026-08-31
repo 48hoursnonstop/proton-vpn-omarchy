@@ -13,6 +13,7 @@ Item {
   property url sourceOverride: ''
   property color iconColor: Color.foreground
   property real iconSize: Style.font.iconLarge
+  property real iconWidth: iconSize
   property bool tint: true
 
   readonly property var rasterIcons: [
@@ -28,7 +29,7 @@ Item {
       ? Qt.resolvedUrl('../assets/mobile/icons/ic_proton_' + iconName + extension)
       : ''
 
-  implicitWidth: iconSize
+  implicitWidth: iconWidth
   implicitHeight: iconSize
   visible: iconName !== '' || String(sourceOverride).length > 0
 
@@ -40,7 +41,7 @@ Item {
     asynchronous: false
     cache: true
     smooth: true
-    sourceSize.width: Math.round(root.iconSize * Screen.devicePixelRatio)
+    sourceSize.width: Math.round(root.iconWidth * Screen.devicePixelRatio)
     sourceSize.height: Math.round(root.iconSize * Screen.devicePixelRatio)
     visible: !root.tint
     layer.enabled: root.tint

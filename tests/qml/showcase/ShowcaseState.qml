@@ -11,7 +11,10 @@ QtObject {
   property bool connected: true
   property bool connecting: false
   property string status: 'connected'
+  property string activeProfileId: 'sample-profile-3'
   property string countryCode: 'CH'
+  property string entryCountryCode: 'IS'
+  property bool secureCore: true
   property string countryName: 'Switzerland'
   property string city: 'Zurich'
   property string serverName: 'CH#42'
@@ -57,7 +60,7 @@ QtObject {
       header: 'Switzerland', description: 'Zurich · Fastest', countryCode: 'CH'
     },
     {
-      id: 'sample-recent-2', kind: 'profile', pinned: false,
+      id: 'sample-recent-2', kind: 'profile', profileId: 'sample-profile-2', pinned: false,
       header: 'Streaming', description: 'United States · Smart', countryCode: 'US'
     }
   ]
@@ -75,8 +78,11 @@ QtObject {
   ]
   property var gateways: []
   property var servers: []
+  property int serverTotal: 0
+  property var remoteSearchServer: null
   property bool locationsLoading: false
   property bool serversLoading: false
+  property bool serverLookupLoading: false
 
   property var profiles: [
     {
@@ -193,7 +199,9 @@ QtObject {
   function setRecentPinned(_id, _pinned) { return 'showcase-pin-recent' }
   function setDefaultConnection(_value) { return 'showcase-default' }
   function loadLocations() {}
-  function loadServers(_query, _country, _gateway, _feature) {}
+  function loadServers(_query, _country, _gateway, _feature, _scope) {}
+  function loadMoreServers() {}
+  function lookupServer(_query) {}
   function connectCountry(_country, _feature) {}
   function connectGateway(_gateway) {}
   function connectServer(_server) {}
