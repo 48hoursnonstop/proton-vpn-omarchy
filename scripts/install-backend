@@ -3,19 +3,19 @@ set -euo pipefail
 export PATH='/usr/bin'
 
 readonly PACKAGE_NAME='proton-vpn-omarchy'
-readonly TARGET_VERSION='0.9.3-1'
+readonly TARGET_VERSION='0.9.4-1'
 readonly PACKAGE_FILE="${PACKAGE_NAME}-${TARGET_VERSION}-x86_64.pkg.tar.zst"
-readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.3'
+readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.4'
 readonly RELEASE_FINGERPRINT='4D0124DE09788D29E3A8798B12BE3422BDA2422C'
-readonly SOURCE_REF='refs/tags/v0.9.3'
-readonly SOURCE_COMMIT='dc3a43d751bb91ca06696c14a4d0f91273528b8d'
-readonly PACKAGE_BYTES=4372948
-readonly PACKAGE_SHA256='fa77fc7b3ec3baaa66aa9d9311a4333afd4bf7f340dc7351fbcb530fc1b64147'
+readonly SOURCE_REF='refs/tags/v0.9.4'
+readonly SOURCE_COMMIT='db4d2381743707dd327ba3811ae1e0afb6147947'
+readonly PACKAGE_BYTES=4372733
+readonly PACKAGE_SHA256='32fff2c377d544151c49398aa4488ad0d4f9757753070035500b63a8d5822c7b'
 readonly SIGNATURE_BYTES=119
-readonly SIGNATURE_SHA256='777d9f9d1bbeda48c71d00e71aab5d4b6969f9c40bfde7117435944e415af2f9'
+readonly SIGNATURE_SHA256='eb7d057d5bb17a844e9dac87d7b0b6d2241f3d5fb19a9585ac97e8ebc0cf7d95'
 readonly ATTESTATION_FILE="${PACKAGE_FILE}.intoto.jsonl"
-readonly ATTESTATION_BYTES=11631
-readonly ATTESTATION_SHA256='9ca8ab41739ca66d4244395340903d99ba9a7d8bb7420b0d5fe5bdbaac6f8a29'
+readonly ATTESTATION_BYTES=11443
+readonly ATTESTATION_SHA256='ae2d6c66b614ba145ab6495dded4b7a1c4f0090eac8edf8c01ff4ab8099c31f7'
 readonly SIGNER_WORKFLOW='48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml'
 
 mode="${1:---install}"
@@ -38,6 +38,8 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 plugin_dir="$(dirname -- "$script_dir")"
 public_key="$plugin_dir/RELEASE-SIGNING-KEY.asc"
 runtime_dir="${XDG_RUNTIME_DIR:-}"
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+verifier_marker="$state_home/proton-vpn-omarchy/installed-github-cli-as-dependency"
 work_dir=''
 progress=0
 error_code='unexpected_error'
@@ -117,6 +119,8 @@ trap on_exit EXIT
 [[ -n $runtime_dir && $runtime_dir == /* && -d $runtime_dir && ! -L $runtime_dir &&
    -O $runtime_dir ]] ||
   fail runtime_unavailable 'XDG_RUNTIME_DIR is unavailable or is not owned by this user.'
+[[ -n $state_home && $state_home == /* && $state_home != / ]] ||
+  fail state_directory_invalid 'XDG_STATE_HOME is invalid.'
 
 umask 077
 # Lock the already-validated runtime-directory inode. No predictable lock file
@@ -137,10 +141,13 @@ done
 
 if [[ ! -x /usr/bin/gh ]]; then
   set_stage 10 installing_verifier
-  if ! pkexec /usr/bin/pacman --noconfirm --needed -S github-cli \
+  if ! pkexec /usr/bin/pacman --noconfirm --needed --asdeps -S github-cli \
        >/dev/null 2>&1; then
     fail verifier_install_failed 'The Arch-signed GitHub attestation verifier could not be installed.'
   fi
+  install -d -m 0700 "$(dirname -- "$verifier_marker")"
+  : >"$verifier_marker"
+  chmod 0600 "$verifier_marker"
 fi
 [[ -x /usr/bin/gh ]] ||
   fail verifier_unavailable 'GitHub artifact attestation verification is unavailable.'

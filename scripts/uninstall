@@ -137,6 +137,28 @@ remove_shared_qml_cache() {
   rm -rf -- "$qml_cache"
 }
 
+verifier_installed_by_us() {
+  local state_home marker
+  state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+  marker="$state_home/proton-vpn-omarchy/installed-github-cli-as-dependency"
+  [[ -f $marker && ! -L $marker && -O $marker ]] || return 1
+  pacman -Q github-cli >/dev/null 2>&1 || return 1
+  pacman -Qdtq 2>/dev/null | grep -Fxq github-cli
+}
+
+remove_system_packages() {
+  command -v pacman >/dev/null 2>&1 || return 0
+
+  local packages=()
+  pacman -Q "$PACKAGE_NAME" >/dev/null 2>&1 && packages+=("$PACKAGE_NAME")
+  verifier_installed_by_us && packages+=(github-cli)
+  (( ${#packages[@]} > 0 )) || return 0
+
+  command -v pkexec >/dev/null 2>&1 || fail 'pkexec is required to remove system packages'
+  pkexec /usr/bin/pacman -Rns --noconfirm "${packages[@]}" >/dev/null ||
+    fail 'backend package removal was cancelled or failed'
+}
+
 worker() {
   [[ ${EUID:-$(id -u)} -ne 0 ]] || fail 'worker must run as the desktop user'
   valid_runtime_dir || fail 'worker has no valid runtime directory'
@@ -147,11 +169,7 @@ worker() {
   remove_network_connections
   remove_proton_sessions
 
-  if command -v pacman >/dev/null 2>&1 && pacman -Q "$PACKAGE_NAME" >/dev/null 2>&1; then
-    command -v pkexec >/dev/null 2>&1 || fail 'pkexec is required to remove the backend package'
-    pkexec /usr/bin/pacman -Rns --noconfirm "$PACKAGE_NAME" >/dev/null ||
-      fail 'backend package removal was cancelled or failed'
-  fi
+  remove_system_packages
 
   remove_user_state
   remove_empty_proton_parents
