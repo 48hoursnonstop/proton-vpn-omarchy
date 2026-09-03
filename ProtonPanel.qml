@@ -17,6 +17,7 @@ Panel {
   property var hostWidget: null
   property QtObject vpnState: null
   property QtObject installerState: null
+  property QtObject uninstallerState: null
   property int cursorIndex: 0
   property bool cursorActive: false
   property string route: 'home'
@@ -395,6 +396,7 @@ Panel {
           visible: panelRoot.installerVisible
           width: panelFlick.width
           installerState: panelRoot.installerState
+          uninstallerState: panelRoot.uninstallerState
           strings: panelRoot.stringTable
           foreground: panelRoot.foreground
           urgent: panelRoot.urgent
@@ -407,6 +409,7 @@ Panel {
           visible: panelRoot.onboardingVisible
           width: panelFlick.width
           vpnState: panelRoot.vpnState
+          uninstallerState: panelRoot.uninstallerState
           strings: panelRoot.stringTable
           foreground: panelRoot.foreground
           urgent: panelRoot.urgent
@@ -419,6 +422,7 @@ Panel {
           visible: panelRoot.authVisible
           width: panelFlick.width
           vpnState: panelRoot.vpnState
+          uninstallerState: panelRoot.uninstallerState
           strings: panelRoot.stringTable
           foreground: panelRoot.foreground
           urgent: panelRoot.urgent
@@ -673,6 +677,7 @@ Panel {
     id: settingsComponent
     ProtonSettingsView {
       vpnState: panelRoot.vpnState; strings: panelRoot.stringTable
+      uninstallerState: panelRoot.uninstallerState
       foreground: panelRoot.foreground; urgent: panelRoot.urgent
       dim: panelRoot.dim; fontFamily: panelRoot.fontFamily
     }

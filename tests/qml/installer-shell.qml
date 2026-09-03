@@ -13,6 +13,10 @@ ShellRoot {
     vpnState: mockAgent
   }
 
+  CleanUninstaller {
+    id: uninstaller
+  }
+
   ProtonStrings {
     id: strings
     localeName: 'es-MX'
@@ -53,6 +57,9 @@ ShellRoot {
       console.log('INSTALLER_QML', installer.packageKnown,
                   installer.canStart, installerView.implicitHeight > 0,
                   installer.scriptPath.endsWith('/scripts/install-backend'),
+                  uninstaller.canStart,
+                  uninstaller.scriptPath.endsWith('/scripts/uninstall'),
+                  strings.text('clean_uninstall') === 'Desinstalación limpia',
                   strings.text('welcome_title') === 'Le damos la bienvenida a Proton VPN',
                   englishStrings.text('welcome_title') === 'Welcome to Proton VPN',
                   strings.localeOptions().length === 2,

@@ -8,6 +8,7 @@ Item {
   id: root
 
   property QtObject vpnState: null
+  property QtObject uninstallerState: null
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
@@ -608,6 +609,7 @@ Item {
       bordered: root.confirmingLogout
       enabled: !(root.vpnState && root.vpnState.authBusy)
       onClicked: {
+        cleanUninstallAction.reset()
         if (root.confirmingLogout) root.vpnState.logout()
         else root.confirmingLogout = true
       }
@@ -632,6 +634,17 @@ Item {
       fontFamily: root.fontFamily
       bordered: false
       onClicked: root.confirmingLogout = false
+    }
+
+    ProtonCleanUninstallAction {
+      id: cleanUninstallAction
+      width: parent.width
+      uninstallerState: root.uninstallerState
+      strings: root.strings
+      foreground: root.foreground
+      urgent: root.urgent
+      fontFamily: root.fontFamily
+      onConfirmingChanged: if (confirming) root.confirmingLogout = false
     }
   }
 }

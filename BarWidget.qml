@@ -50,6 +50,7 @@ BarWidget {
     if ('hostWidget' in target) target.hostWidget = root
     if ('vpnState' in target) target.vpnState = agentState
     if ('installerState' in target) target.installerState = backendInstaller
+    if ('uninstallerState' in target) target.uninstallerState = cleanUninstaller
   }
 
   function open() {
@@ -101,6 +102,10 @@ BarWidget {
   BackendInstaller {
     id: backendInstaller
     vpnState: agentState
+  }
+
+  CleanUninstaller {
+    id: cleanUninstaller
   }
 
   Connections {

@@ -8,6 +8,7 @@ Item {
   id: root
 
   property QtObject vpnState: null
+  property QtObject uninstallerState: null
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
@@ -375,6 +376,15 @@ Item {
       font.pixelSize: Style.font.bodySmall
       wrapMode: Text.WordWrap
       horizontalAlignment: Text.AlignHCenter
+    }
+
+    ProtonCleanUninstallAction {
+      width: parent.width
+      uninstallerState: root.uninstallerState
+      strings: root.strings
+      foreground: root.foreground
+      urgent: root.urgent
+      fontFamily: root.fontFamily
     }
   }
 }
