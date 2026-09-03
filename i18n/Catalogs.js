@@ -346,6 +346,7 @@ var catalogs = {
     "installer_stage": {
       "detecting": "Checking the installation…",
       "missing": "The backend is not installed yet.",
+      "outdated": "The installed backend needs to be updated.",
       "installed": "Backend installed; waiting for the agent…",
       "launching": "Starting the installer…",
       "preflight": "Checking the system…",
@@ -866,6 +867,7 @@ var catalogs = {
     "installer_stage": {
       "detecting": "Comprobando la instalación…",
       "missing": "El backend todavía no está instalado.",
+      "outdated": "El backend instalado necesita actualizarse.",
       "installed": "Backend instalado; esperando al agente…",
       "launching": "Iniciando el instalador…",
       "preflight": "Comprobando el sistema…",

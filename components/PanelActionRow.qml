@@ -116,6 +116,7 @@ CursorSurface {
         visible: !root.hasProfileIcon && !root.hasFlag && !root.hasGenericIcon
         anchors.fill: parent
         text: root.iconText
+        textFormat: Text.PlainText
         color: root.iconForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.heading
@@ -131,6 +132,7 @@ CursorSurface {
       Text {
         Layout.fillWidth: true
         text: root.title
+        textFormat: Text.PlainText
         color: root.rowForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.body
@@ -141,6 +143,7 @@ CursorSurface {
         Layout.fillWidth: true
         visible: root.subtitle !== ''
         text: root.subtitle
+        textFormat: Text.PlainText
         color: root.dimForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.caption
@@ -158,6 +161,7 @@ CursorSurface {
       Text {
         visible: root.detail !== ''
         text: root.detail
+        textFormat: Text.PlainText
         color: root.dimForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.caption

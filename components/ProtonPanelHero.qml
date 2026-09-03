@@ -57,6 +57,7 @@ Item {
         id: titleText
         visible: root.title !== ""
         text: root.title
+        textFormat: Text.PlainText
         width: Math.min(
           implicitWidth,
           Math.max(
@@ -94,6 +95,7 @@ Item {
           id: detailText
           anchors.centerIn: parent
           text: root.detail
+          textFormat: Text.PlainText
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.body
@@ -106,6 +108,7 @@ Item {
       id: metaText
       width: parent.width
       text: root.meta.toUpperCase()
+      textFormat: Text.PlainText
       visible: text !== ""
       color: root.dim
       font.family: root.fontFamily

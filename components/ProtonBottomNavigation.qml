@@ -75,6 +75,7 @@ Item {
             Text {
               width: parent.width
               text: String(parent.parent.modelData.label || '')
+              textFormat: Text.PlainText
               color: parent.parent.selectedRoute
                 ? Style.selectedStateColor(root.foreground, Color.accent)
                 : root.dim

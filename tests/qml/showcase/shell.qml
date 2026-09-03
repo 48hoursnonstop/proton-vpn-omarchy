@@ -12,12 +12,21 @@ ShellRoot {
   readonly property string route: Quickshell.env('PROTON_SHOWCASE_ROUTE') || 'home'
   readonly property string outputPath: Quickshell.env('PROTON_SHOWCASE_OUTPUT')
   property bool captureWarmed: false
+  readonly property bool rootRoute: route === 'home' || route === 'locations' ||
+    route === 'gateways' || route === 'profiles' || route === 'settings'
+  readonly property bool gatedRoute: route === 'onboarding' ||
+    route === 'authentication' || route === 'installer'
   property var navigationDestinations: [
     { route: 'home', icon: 'house', label: 'Home' },
     { route: 'locations', icon: 'earth', label: 'Countries' },
     { route: 'profiles', icon: 'window_terminal', label: 'Profiles' },
     { route: 'settings', icon: 'cog_wheel', label: 'Settings' }
   ]
+
+  function parentLabel() {
+    return route === 'recents' || route === 'details'
+      ? stringTable.text('home') : stringTable.text('settings')
+  }
 
   ShowcaseState {
     id: showcaseState
@@ -29,6 +38,21 @@ ShellRoot {
   ProtonStrings {
     id: stringTable
     localeName: 'en'
+  }
+
+  QtObject {
+    id: showcaseInstaller
+    property bool packageCurrent: false
+    property bool packagePresent: false
+    property bool running: false
+    property string state: 'ready'
+    property real progress: 0
+    property string errorCode: ''
+    property string diagnostic: ''
+    property bool agentReady: false
+    property bool installRequested: false
+    property bool canStart: true
+    function start() {}
   }
 
   // A real xdg-toplevel constrained to the plugin panel's publication size.
@@ -78,9 +102,9 @@ ShellRoot {
             spacing: Style.space(8)
 
             ProtonComponents.ProtonIconButton {
-              visible: route === 'details' || route === 'default'
+              visible: !showcaseShell.rootRoute && !showcaseShell.gatedRoute
               iconName: 'chevron_left'
-              label: stringTable.text('home')
+              label: showcaseShell.parentLabel()
               foreground: Color.popups.text
               fontFamily: Style.font.family
             }
@@ -92,10 +116,21 @@ ShellRoot {
               sourceComponent: {
                 switch (route) {
                 case 'locations': return locationsComponent
+                case 'gateways': return gatewaysComponent
                 case 'profiles': return profilesComponent
+                case 'recents': return recentsComponent
                 case 'details': return detailsComponent
-                case 'default': return defaultComponent
+                case 'default-connection': return defaultComponent
                 case 'settings': return settingsComponent
+                case 'split-tunneling': return splitComponent
+                case 'excluded-locations': return excludedComponent
+                case 'account': return accountComponent
+                case 'diagnostics': return diagnosticsComponent
+                case 'support': return supportComponent
+                case 'about': return aboutComponent
+                case 'onboarding': return onboardingComponent
+                case 'authentication': return authComponent
+                case 'installer': return installerComponent
                 default: return homeComponent
                 }
               }
@@ -106,7 +141,7 @@ ShellRoot {
         ProtonComponents.ProtonBottomNavigation {
           id: navigation
           z: 10
-          visible: route !== 'details' && route !== 'default'
+          visible: showcaseShell.rootRoute
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.bottom: parent.bottom
@@ -147,6 +182,20 @@ ShellRoot {
   }
 
   Component {
+    id: gatewaysComponent
+    ProtonLocationsView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+      section: 'gateways'
+      sectionSwitcherVisible: false
+    }
+  }
+
+  Component {
     id: profilesComponent
     ProtonProfilesView {
       vpnState: showcaseState
@@ -161,6 +210,18 @@ ShellRoot {
   Component {
     id: detailsComponent
     ProtonConnectionDetailsView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: recentsComponent
+    ProtonRecentsView {
       vpnState: showcaseState
       strings: stringTable
       foreground: Color.popups.text
@@ -186,6 +247,114 @@ ShellRoot {
     id: defaultComponent
     ProtonDefaultConnectionView {
       vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: splitComponent
+    ProtonSplitTunnelingView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: excludedComponent
+    ProtonExcludedLocationsView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: accountComponent
+    ProtonAccountView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: diagnosticsComponent
+    ProtonDiagnosticsView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: supportComponent
+    ProtonSupportView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: aboutComponent
+    ProtonAboutView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: onboardingComponent
+    ProtonOnboardingView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: authComponent
+    ProtonAuthView {
+      vpnState: showcaseState
+      strings: stringTable
+      foreground: Color.popups.text
+      urgent: Color.urgent
+      dim: Qt.darker(Color.popups.text, 1.55)
+      fontFamily: Style.font.family
+    }
+  }
+
+  Component {
+    id: installerComponent
+    ProtonInstallerView {
+      installerState: showcaseInstaller
       strings: stringTable
       foreground: Color.popups.text
       urgent: Color.urgent

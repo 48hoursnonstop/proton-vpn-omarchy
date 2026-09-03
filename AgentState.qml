@@ -129,6 +129,28 @@ QtObject {
   property double uploadBytes: 0
   property double downloadBytesPerSecond: 0
   property double uploadBytesPerSecond: 0
+
+  function normalizedDefaultConnection(selection) {
+    var kind = String(selection && selection.type || '')
+    switch (kind) {
+    case 'fastest':
+    case 'random':
+    case 'last':
+      return { type: kind }
+    case 'profile':
+      var profileId = String(selection.profileId || '')
+      return profileId !== ''
+        ? { type: kind, profileId: profileId }
+        : { type: 'fastest' }
+    case 'recent':
+      var recentId = String(selection.recentId || '')
+      return recentId !== ''
+        ? { type: kind, recentId: recentId }
+        : { type: 'fastest' }
+    default:
+      return { type: 'fastest' }
+    }
+  }
   property bool deviceLocationKnown: false
   property string deviceIpAddress: ''
   property string deviceCountryCode: ''
@@ -200,7 +222,7 @@ QtObject {
   property int nextRequestId: 1
   readonly property string clientInstanceId: 'plugin-' + Date.now() + '-' +
     Math.floor(Math.random() * 0x100000000).toString(16)
-  readonly property string clientVersion: '0.9.1'
+  readonly property string clientVersion: '0.9.2'
   property string serverClientInstanceId: ''
   property var pendingRequests: ({})
   property var pendingConnectionRecents: ({})
@@ -1658,7 +1680,7 @@ QtObject {
     accountScopeKnown = !!store.account_scope_known
     profileCount = Number(store.profile_count || 0)
     recentCount = Number(store.recent_count || 0)
-    defaultConnection = store.default_connection || { type: 'fastest' }
+    defaultConnection = normalizedDefaultConnection(store.default_connection)
     legacyMigrationAvailable = !!store.migration_available
 
     if (storeRevision !== previousRevision && agentAvailable) {

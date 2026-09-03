@@ -60,6 +60,7 @@ Item {
       visible: root.label !== ''
       Layout.alignment: Qt.AlignVCenter
       text: root.label
+      textFormat: Text.PlainText
       color: root.foreground
       font.family: root.fontFamily
       font.pixelSize: Style.font.body

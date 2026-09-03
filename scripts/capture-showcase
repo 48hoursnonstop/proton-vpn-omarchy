@@ -8,7 +8,7 @@ output_dir="${1:-$root/docs/screenshots}"
 qpa_platform="${PROTON_SHOWCASE_QPA_PLATFORM:-wayland}"
 host_runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 only_route="${PROTON_SHOWCASE_ONLY:-}"
-capture_scale="${PROTON_SHOWCASE_SCALE:-1}"
+capture_scale="${PROTON_SHOWCASE_SCALE:-2}"
 capture_count=0
 
 [[ $capture_scale =~ ^[1-4]$ ]] || {
@@ -122,16 +122,24 @@ capture home vantablack home-vantablack.png
 capture home tokyo-night home-tokyo-night.png
 capture home flexoki-light home-flexoki-light.png
 capture locations catppuccin countries-catppuccin.png
+capture gateways catppuccin gateways-catppuccin.png
 capture profiles catppuccin profiles-catppuccin.png
+capture recents catppuccin recents-catppuccin.png
 capture details catppuccin connection-details-catppuccin.png
 capture settings catppuccin settings-catppuccin.png
+capture split-tunneling catppuccin split-tunneling-catppuccin.png
+capture excluded-locations catppuccin excluded-locations-catppuccin.png
+capture default-connection catppuccin default-connection-catppuccin.png
+capture account catppuccin account-catppuccin.png
+capture diagnostics catppuccin diagnostics-catppuccin.png
+capture support catppuccin support-catppuccin.png
+capture about catppuccin about-catppuccin.png
+capture onboarding catppuccin onboarding-catppuccin.png
+capture authentication catppuccin authentication-catppuccin.png
+capture installer catppuccin installer-catppuccin.png
 
-# Extra regression surfaces stay opt-in so the publication set above does not
-# grow every time a secondary page gains coverage.
-if [[ $only_route == default ]]; then
-  showcase_theme="${PROTON_SHOWCASE_THEME:-catppuccin}"
-  capture default "$showcase_theme" "default-connection-$showcase_theme.png"
-fi
+# A regression-only state remains opt-in so the publication set contains one
+# image for each real page without exposing internal fixtures.
 if [[ $only_route == home-standard ]]; then
   showcase_theme="${PROTON_SHOWCASE_THEME:-catppuccin}"
   capture home-standard "$showcase_theme" "home-standard-$showcase_theme.png"

@@ -58,7 +58,10 @@ ShellRoot {
                   strings.localeOptions().length === 2,
                   strings.profileCopyName('Test') === 'Copia de Test',
                   strings.catalogsComplete,
-                  fallbackStrings.text('welcome_title') === 'Welcome to Proton VPN')
+                  fallbackStrings.text('welcome_title') === 'Welcome to Proton VPN',
+                  installer.detectedPackageState(false, '0.9.0-1') === 'outdated',
+                  strings.installerStage('outdated') ===
+                    'El backend instalado necesita actualizarse.')
       Qt.quit()
     }
   }

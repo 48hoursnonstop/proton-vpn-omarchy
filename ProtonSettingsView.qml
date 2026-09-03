@@ -592,6 +592,7 @@ Item {
     Text {
       width: parent.width
       text: root.vpnState ? String(root.vpnState.accountName || '') : ''
+      textFormat: Text.PlainText
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall

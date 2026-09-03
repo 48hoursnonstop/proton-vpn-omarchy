@@ -157,8 +157,9 @@ Item {
     ProtonIconButton {
       visible: root.selectedCountry !== null
       iconName: 'chevron_left'
-      label: (root.selectedState
-        ? root.selectedState : String(root.selectedCountry.name || root.selectedCountry.code || ''))
+      label: root.selectedState ? root.selectedState
+        : (root.selectedCountry
+          ? String(root.selectedCountry.name || root.selectedCountry.code || '') : '')
       foreground: root.foreground
       fontFamily: root.fontFamily
       onClicked: {

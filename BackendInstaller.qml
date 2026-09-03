@@ -42,6 +42,11 @@ QtObject {
     }
   }
 
+  function detectedPackageState(current, version) {
+    if (current) return 'installed'
+    return String(version || '').length > 0 ? 'outdated' : 'missing'
+  }
+
   function demand() {
     frontendDemanded = true
     refreshPackage()
@@ -126,7 +131,8 @@ QtObject {
       root.packageCurrent = exitCode === 0
       root.installedVersion = root.detectedVersion
       if (!root.installRequested && root.state !== 'error')
-        root.state = root.packageCurrent ? 'installed' : 'missing'
+        root.state = root.detectedPackageState(
+          root.packageCurrent, root.installedVersion)
       root.scheduleRepairSuggestion()
     }
   }

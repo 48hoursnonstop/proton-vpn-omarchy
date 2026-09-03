@@ -369,6 +369,7 @@ Item {
       visible: root.feedback().length > 0
       width: parent.width
       text: root.feedback()
+      textFormat: Text.PlainText
       color: root.vpnState && root.vpnState.operationBusy ? root.dim : root.urgent
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall

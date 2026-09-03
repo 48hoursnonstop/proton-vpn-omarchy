@@ -169,6 +169,7 @@ Item {
           : root.strings.error(
               root.vpnState.lastErrorCode,
               root.vpnState.lastError)
+      textFormat: Text.PlainText
       color: root.vpnState && root.vpnState.operationBusy
         ? root.dim : root.urgent
       font.family: root.fontFamily
@@ -211,6 +212,7 @@ Item {
         root.vpnState.networkConflicts.length > 0
       width: parent.width
       text: root.strings.networkConflictWarning(root.vpnState.networkConflicts)
+      textFormat: Text.PlainText
       color: root.urgent
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall

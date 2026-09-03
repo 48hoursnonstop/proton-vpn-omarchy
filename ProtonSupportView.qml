@@ -194,6 +194,7 @@ Item {
       Text {
         width: parent.width
         text: root.category ? String(root.category.label || '') : ''
+        textFormat: Text.PlainText
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
@@ -240,6 +241,7 @@ Item {
           Text {
             width: parent.width
             text: String(modelData.label || '') + (modelData.is_mandatory ? ' *' : '')
+            textFormat: Text.PlainText
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption

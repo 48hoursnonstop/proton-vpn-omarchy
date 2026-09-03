@@ -24,13 +24,26 @@ plugin skin:
 | --- | --- | --- |
 | ![Home in Vantablack](docs/screenshots/home-vantablack.png) | ![Home in Tokyo Night](docs/screenshots/home-tokyo-night.png) | ![Home in Flexoki Light](docs/screenshots/home-flexoki-light.png) |
 
-| Countries | Profiles |
-| --- | --- |
-| ![Country browser](docs/screenshots/countries-catppuccin.png) | ![Connection profiles](docs/screenshots/profiles-catppuccin.png) |
-| Connection details | Settings |
-| ![Connection details and live traffic](docs/screenshots/connection-details-catppuccin.png) | ![VPN settings](docs/screenshots/settings-catppuccin.png) |
+<details>
+<summary><strong>View every screen</strong></summary>
 
-All screenshots are rendered in English from the production QML components
+| Countries | Gateways | Profiles |
+| --- | --- | --- |
+| ![Country browser](docs/screenshots/countries-catppuccin.png) | ![Gateway browser](docs/screenshots/gateways-catppuccin.png) | ![Connection profiles](docs/screenshots/profiles-catppuccin.png) |
+| Recents and favorites | Connection details | Settings |
+| ![Recents and favorites](docs/screenshots/recents-catppuccin.png) | ![Connection details and live traffic](docs/screenshots/connection-details-catppuccin.png) | ![VPN settings](docs/screenshots/settings-catppuccin.png) |
+| Split tunneling | Excluded locations | Default connection |
+| ![App and IP split tunneling](docs/screenshots/split-tunneling-catppuccin.png) | ![Excluded locations](docs/screenshots/excluded-locations-catppuccin.png) | ![Default connection selection](docs/screenshots/default-connection-catppuccin.png) |
+| Account | Diagnostics | Support |
+| ![Account](docs/screenshots/account-catppuccin.png) | ![Sanitized diagnostics](docs/screenshots/diagnostics-catppuccin.png) | ![Support and reporting](docs/screenshots/support-catppuccin.png) |
+| About | First-run setup | Authentication |
+| ![About](docs/screenshots/about-catppuccin.png) | ![First-run setup](docs/screenshots/onboarding-catppuccin.png) | ![Authentication](docs/screenshots/authentication-catppuccin.png) |
+| Signed backend installer |  |  |
+| ![Signed backend installer](docs/screenshots/installer-catppuccin.png) |  |  |
+
+</details>
+
+All 19 screenshots are rendered at 2× in English from the production QML components
 with deterministic documentation data. No user account, IP address, setting,
 recent connection or profile is read for publication captures.
 
@@ -59,18 +72,18 @@ the shell process. Review the source in this repository before confirming.
 If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
-curl -fL --proto '=https' --max-filesize 4368840 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
-curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig
-curl -fL --proto '=https' --max-filesize 11447 -o proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl
-curl -fL --proto '=https' --max-filesize 880 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.1/RELEASE-SIGNING-KEY.asc
-printf '%s  %s\n' 36427ed9fb94cbca49850292eb278feaf200ce6d4116790e379c6bf71e12e7c5 proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst | sha256sum -c -
-printf '%s  %s\n' 5a4a490811a1a6da632b297a1648753d72328c823faaa04b4d01be06c8cb3fad proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
-printf '%s  %s\n' 1d1f6a8fc04691e3532db77037b3a6663f5cb75b0eb5c2033043fa612490917e proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
-gh attestation verify proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.1 --source-digest 79351f3264d1ba1d535197fe3fddf2dbe7984363 --deny-self-hosted-runners
+curl -fL --proto '=https' --max-filesize 4371068 -o proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.2/proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst
+curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.2/proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.sig
+curl -fL --proto '=https' --max-filesize 11623 -o proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.2/proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.intoto.jsonl
+curl -fL --proto '=https' --max-filesize 880 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.2/RELEASE-SIGNING-KEY.asc
+printf '%s  %s\n' 74040a32af7bfe5e5861385f76cd99b849ef5035a42aa92b4b1e4763dca15ce4 proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst | sha256sum -c -
+printf '%s  %s\n' 5a5de5e5a92b00bac7258fbd54344efa65b2117843c9e58365df00acecf63445 proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
+printf '%s  %s\n' ebc9df88a686fa0e4b72b950bbaaa228b455cbce4edb2368f62b8a1a35cf0051 proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
+gh attestation verify proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.2 --source-digest d5c9599e5c4e5d3fff3441e39ce5704cd4cb0684 --deny-self-hosted-runners
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "4D0124DE09788D29E3A8798B12BE3422BDA2422C"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
-sudo pacman -U ./proton-vpn-omarchy-0.9.1-1-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst
+sudo pacman -U ./proton-vpn-omarchy-0.9.2-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
 
@@ -149,6 +162,6 @@ directories so reinstalling does not silently erase them.
 
 The release contains the backend's corresponding source archive and Arch build
 recipe; the same code is browsable in the
-[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.1).
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.2).
 Project code is licensed under GPL-3.0-or-later; individual upstream assets
 retain their original notices. See [NOTICE.md](NOTICE.md).

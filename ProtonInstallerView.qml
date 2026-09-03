@@ -69,6 +69,7 @@ Item {
           : root.failed
             ? root.strings.installerError(root.installerState.errorCode)
             : root.strings.installerStage(root.installerState.state)
+        textFormat: Text.PlainText
         color: root.failed ? root.urgent : root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
@@ -112,6 +113,7 @@ Item {
     Text {
       width: parent.width
       text: root.label('signing_fingerprint')
+      textFormat: Text.PlainText
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
@@ -153,6 +155,7 @@ Item {
         root.installerState.diagnostic.length > 0
       width: parent.width
       text: root.installerState ? root.installerState.diagnostic : ''
+      textFormat: Text.PlainText
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption

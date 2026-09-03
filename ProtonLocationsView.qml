@@ -612,6 +612,7 @@ Item {
             ? root.label('locations')
             : root.section === 'gateways'
               ? root.label('gateways') : root.label('countries')
+        textFormat: Text.PlainText
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.heading
@@ -895,6 +896,7 @@ Item {
           anchors.bottom: parent.bottom
           anchors.bottomMargin: Style.space(3)
           text: String(searchResultDelegate.modelData.title || '').toUpperCase()
+          textFormat: Text.PlainText
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption

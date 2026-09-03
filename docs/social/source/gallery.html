@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    @font-face {
+      font-family: ProtonSans;
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: block;
+      src: url("https://protonvpn.com/fonts/inter/InterVariable.en.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: ProtonSerif;
+      font-style: normal;
+      font-weight: 200 700;
+      font-display: block;
+      src: url("https://protonvpn.com/fonts/arizona/ABCArizonaFlareVariable.en.woff2") format("woff2");
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 1600px;
+      height: 838px;
+      margin: 0;
+      overflow: hidden;
+      background: #1b1340;
+    }
+    body { font-family: ProtonSans, Inter, Arial, sans-serif; color: #f7f5ff; }
+    main { position: relative; width: 1600px; height: 838px; overflow: hidden; isolation: isolate; }
+    .background {
+      position: absolute;
+      z-index: -3;
+      top: -75px;
+      left: -330px;
+      width: 1888px;
+      height: 988px;
+      object-fit: cover;
+    }
+    .shade {
+      position: absolute;
+      z-index: -2;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(9,7,31,.56) 0%, rgba(9,7,31,.24) 54%, rgba(9,7,31,.02) 76%),
+        radial-gradient(75% 100% at 8% 50%, rgba(27,19,64,.30), transparent 72%);
+    }
+    .brand {
+      position: absolute;
+      top: 68px;
+      left: 84px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: #c5b7ff;
+      font-size: 16px;
+      font-weight: 690;
+      letter-spacing: .105em;
+      text-transform: uppercase;
+    }
+    .mark { width: 42px; height: 42px; }
+    .copy { position: absolute; top: 94px; left: 84px; width: 1432px; text-align: center; }
+    h1 {
+      margin: 0;
+      max-width: 1432px;
+      font-family: ProtonSerif, Georgia, serif;
+      font-size: 58px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.042em;
+      color: #f7f5ff;
+    }
+    h1 .accent { color: #c5b7ff; }
+    .summary {
+      width: 1120px;
+      margin: 18px auto 0;
+      color: #e2dbff;
+      font-size: 21px;
+      font-weight: 470;
+      line-height: 1.3;
+      letter-spacing: -.02em;
+    }
+    .shot-glow {
+      position: absolute;
+      z-index: -1;
+      top: 185px;
+      left: 90px;
+      width: 1420px;
+      height: 625px;
+      border-radius: 48%;
+      background: radial-gradient(ellipse, rgba(109,74,255,.34), rgba(142,255,238,.08) 46%, transparent 72%);
+      filter: blur(24px);
+    }
+    .shots {
+      position: absolute;
+      z-index: 2;
+      top: 220px;
+      left: 185px;
+      width: 1230px;
+      height: 590px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .product-shot {
+      width: 380px;
+      height: 590px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 18px 32px rgba(0,0,0,.45)) drop-shadow(0 0 40px rgba(109,74,255,.22));
+    }
+    .edge { position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgba(226,219,255,.08); }
+  </style>
+</head>
+<body>
+  <main>
+    <img class="background" src="cover-art.png" alt="">
+    <div class="shade"></div>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 30 30" aria-hidden="true">
+        <defs>
+          <radialGradient id="a" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(16.9 -11.2) rotate(93.66) scale(43.4 54.5)"><stop offset=".4" stop-color="#6d4aff"/><stop offset=".995" stop-color="#00f0c3"/></radialGradient>
+          <linearGradient id="b" x1="27.1" y1="26.8" x2="7.6" y2="-6.7" gradientUnits="userSpaceOnUse"><stop offset=".07" stop-color="#8effee"/><stop offset=".45" stop-color="#c9c7ff"/><stop offset="1" stop-color="#7341ff"/></linearGradient>
+        </defs>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M12.043 26.763c1.14 2.065 4.067 2.177 5.362.204l12.07-18.393c1.28-1.951.055-4.566-2.262-4.832L3.489 1.022C.959.732-.842 3.419.389 5.648l11.654 21.115Z" fill="url(#a)"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="m13.794 23.226-1.072 1.61c-.434.652-1.405.612-1.784-.074l1.105 2.001c.197.357.447.655.733.895 1.37 1.147 3.558.941 4.629-.691l12.07-18.393c1.28-1.951.055-4.566-2.262-4.832L3.489 1.022C.959.732-.842 3.419.389 5.648l.093.17 20.193 2.336c1.288.149 1.967 1.602 1.255 2.685l-8.136 12.387Z" fill="url(#b)"/>
+      </svg>
+      Proton VPN for Omarchy
+    </div>
+    <section class="copy">
+      <h1 id="title"></h1>
+      <p class="summary" id="summary"></p>
+    </section>
+    <div class="shot-glow"></div>
+    <div class="shots">
+      <img class="product-shot" id="shot-1" alt="Proton VPN for Omarchy interface">
+      <img class="product-shot" id="shot-2" alt="Proton VPN for Omarchy interface">
+      <img class="product-shot" id="shot-3" alt="Proton VPN for Omarchy interface">
+    </div>
+    <div class="edge"></div>
+  </main>
+  <script>
+    const slides = {
+      profiles: {
+        title: 'Profiles that <span class="accent">remember everything.</span>',
+        summary: 'Save the location, protocol and privacy features you actually use.',
+        shots: ['../../screenshots/profiles-catppuccin.png', '../../screenshots/default-connection-catppuccin.png', '../../screenshots/recents-catppuccin.png']
+      },
+      split: {
+        title: 'Advanced <span class="accent">split tunneling.</span>',
+        summary: 'Include or exclude apps and IPv4/IPv6 ranges without giving up the Kill Switch.',
+        shots: ['../../screenshots/split-tunneling-catppuccin.png', '../../screenshots/excluded-locations-catppuccin.png', '../../screenshots/settings-catppuccin.png']
+      },
+      locations: {
+        title: 'Choose exactly <span class="accent">where to connect.</span>',
+        summary: 'Countries, cities, individual servers, Secure Core, P2P, Tor and private gateways.',
+        shots: ['../../screenshots/countries-catppuccin.png', '../../screenshots/gateways-catppuccin.png', '../../screenshots/connection-details-catppuccin.png']
+      },
+      traffic: {
+        title: 'Live status. <span class="accent">No frozen UI.</span>',
+        summary: 'Connection progress, traffic and privacy status remain visible while the backend works.',
+        shots: ['../../screenshots/home-tokyo-night.png', '../../screenshots/connection-details-catppuccin.png', '../../screenshots/diagnostics-catppuccin.png']
+      }
+    };
+    const key = new URLSearchParams(location.search).get('slide') || 'profiles';
+    const slide = slides[key] || slides.profiles;
+    document.getElementById('title').innerHTML = slide.title;
+    document.getElementById('summary').textContent = slide.summary;
+    slide.shots.forEach((source, index) => {
+      document.getElementById('shot-' + (index + 1)).src = source;
+    });
+  </script>
+</body>
+</html>

@@ -86,6 +86,10 @@ ShellRoot {
       }))
       var foregroundErrorShown = agentState.lastError === 'Foreground action failed' &&
         agentState.lastErrorCode === 'connection_failed'
+      var missingDefaultIsFastest =
+        agentState.normalizedDefaultConnection({}).type === 'fastest'
+      var malformedProfileIsFastest =
+        agentState.normalizedDefaultConnection({ type: 'profile' }).type === 'fastest'
       console.log('TRAFFIC_QML', traffic.downloadHistory.length >= 2,
                   traffic.uploadHistory.length >= 2,
                   traffic.implicitHeight > 0,
@@ -95,7 +99,9 @@ ShellRoot {
                   passiveActiveHidden,
                   foregroundActiveShown,
                   passiveErrorPreserved,
-                  foregroundErrorShown)
+                  foregroundErrorShown,
+                  missingDefaultIsFastest,
+                  malformedProfileIsFastest)
       Qt.quit()
     }
   }

@@ -6,7 +6,11 @@ QtObject {
   id: root
 
   property bool agentAvailable: true
+  property bool agentConnecting: false
   property bool backendReady: true
+  property string clientVersion: '0.9.2'
+  property string backendCoreVersion: '0.9.2'
+  property bool storeReady: true
   property bool signedIn: true
   property bool connected: true
   property bool connecting: false
@@ -44,10 +48,23 @@ QtObject {
   property bool tunnelConfigurationBusy: false
   property bool storeOperationBusy: false
   property bool authBusy: false
+  property bool configurationOperationBusy: false
+  property bool operationCancelable: false
+  property string operationKind: ''
+  property string accountStatus: 'signed_out'
+  property bool accountCredentialless: false
+  property bool accountUpgradeSupported: true
+  property bool twoFactorCodeSupported: true
+  property bool twoFactorSecurityKeySupported: true
+  property bool securityKeyPinRequired: false
+  property bool networkBlockedKnown: true
+  property bool networkBlocked: false
+  property var networkConflicts: []
 
   property string locale: 'en'
   property string accountName: 'demo@proton.example'
   property int accountTier: 2
+  property bool legacyMigrationAvailable: false
   property bool startWithOmarchy: true
   property bool autoConnect: true
   property bool notificationsEnabled: true
@@ -66,6 +83,7 @@ QtObject {
   ]
   property var countries: [
     { code: 'CH', name: 'Switzerland', available_server_count: 86, server_count: 86,
+      states: [{ name: 'Zurich', cities: ['Zurich'] }],
       secure_core: true, p2p: true, tor: true },
     { code: 'NL', name: 'Netherlands', available_server_count: 132, server_count: 135,
       secure_core: true, p2p: true, tor: false },
@@ -76,10 +94,19 @@ QtObject {
     { code: 'IS', name: 'Iceland', available_server_count: 24, server_count: 24,
       secure_core: true, p2p: true, tor: false }
   ]
-  property var gateways: []
-  property var servers: []
-  property int serverTotal: 0
+  property var gateways: [
+    { name: 'Example Corp', available_server_count: 4, server_count: 4 },
+    { name: 'Research Lab', available_server_count: 2, server_count: 3 }
+  ]
+  property var servers: [
+    { name: 'CH#42', country_code: 'CH', country_name: 'Switzerland',
+      city: 'Zurich', load: 24, secure_core: false, p2p: true, tor: false },
+    { name: 'NL#18', country_code: 'NL', country_name: 'Netherlands',
+      city: 'Amsterdam', load: 31, secure_core: false, p2p: true, tor: false }
+  ]
+  property int serverTotal: 2
   property var remoteSearchServer: null
+  property string desiredServerLookupQuery: ''
   property bool locationsLoading: false
   property bool serversLoading: false
   property bool serverLookupLoading: false
@@ -159,6 +186,28 @@ QtObject {
     { id: 'example-browser', name: 'Example Browser', executable: '/usr/bin/example-browser' },
     { id: 'example-player', name: 'Example Player', executable: '/usr/bin/example-player' }
   ]
+  property var excludedLocations: [
+    { kind: 'country', country_code: 'US' },
+    { kind: 'city', country_code: 'GB', city: 'London' }
+  ]
+
+  property bool diagnosticsCopied: false
+  property bool diagnosticsLoading: false
+  property string diagnosticsSummary: 'Synthetic diagnostics for publication only.'
+  property var diagnosticsFailures: []
+  property var diagnosticsSources: [
+    { source: 'agent', available: true, bytes: 18432 },
+    { source: 'network_manager', available: true, bytes: 7168 },
+    { source: 'journal', available: true, bytes: 32768 }
+  ]
+  property bool reportIssueSupported: true
+  property bool reportCategoriesLoading: false
+  property bool reportSubmitted: false
+  property var reportCategories: [
+    { label: 'Connection problem', suggestions: [], input_fields: [] },
+    { label: 'Slow connection', suggestions: [], input_fields: [] },
+    { label: 'Something else', suggestions: [], input_fields: [] }
+  ]
 
   property bool connectionFeedbackAvailable: false
   property bool connectionFeedbackViewed: true
@@ -192,7 +241,9 @@ QtObject {
   }
 
   function requestPending(_method) { return false }
+  function supportsMethod(_method) { return true }
   function toggleConnection() {}
+  function quickConnect() {}
   function loadRecents(_delay) {}
   function connectRecent(_recent) {}
   function deleteRecent(_id) { return 'showcase-delete-recent' }
@@ -205,11 +256,15 @@ QtObject {
   function connectCountry(_country, _feature) {}
   function connectGateway(_gateway) {}
   function connectServer(_server) {}
+  function connectLocation(_target) {}
   function loadProfiles(_delay) {}
   function connectProfile(_profile) {}
   function saveProfile(_profile) { return 'showcase-save-profile' }
   function deleteProfile(_id) { return 'showcase-delete-profile' }
+  function duplicateProfile(_profile) { return 'showcase-duplicate-profile' }
+  function hasCapability(_name) { return true }
   function loadApps(_query) {}
+  function loadMoreApps() {}
   function refreshNetShieldStatistics() {}
   function setConnectionFeedback(_value) {}
   function setProtocol(_value) {}
@@ -219,6 +274,24 @@ QtObject {
   function setNotifications(_enabled) {}
   function setPortForwardingNotifications(_enabled) {}
   function logout() {}
+  function login(_username, _password) {}
+  function loginGuest() {}
+  function submitTwoFactor(_code) {}
+  function authenticateWithSecurityKey() {}
+  function submitSecurityKeyPin(_pin) {}
+  function cancelSecurityKey() {}
+  function send(_method, _params) {}
+  function completeOnboarding(_locale, _start, _connect) {}
+  function loadExcludedLocations() {}
+  function setExcludedLocations(value) { excludedLocations = value }
+  function loadDiagnostics() {}
+  function copyDiagnostics() { diagnosticsCopied = true }
+  function loadReportCategories() {}
+  function submitReport(_category, _email, _fields, _logs) {}
+  function openCommunityIssue() {}
+  function openTrustedUrl(_url) {}
+  function openAccountManagement() {}
+  function openUpgrade() {}
   function applySplitTunneling(_enabled, _mode, _standardApps, _inverseApps,
                                _standardRanges, _inverseRanges) {}
 }
