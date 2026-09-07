@@ -119,7 +119,7 @@ release. Verify the fingerprint before trusting a newly downloaded copy.
 - automatic warnings for conflicting VPNs, tunnel interfaces and insecure Wi-Fi
 - suspend/resume reconnection and Windows-compatible random-country selection
 - session persistence across restarts on Omarchy's passwordless GNOME Keyring,
-  while retaining Proton's shared Secret Service data format
+  using an isolated ASCII-safe Secret Service representation
 - Spanish and English catalogs with BCP 47 aliases, English fallback, placeholders,
   plurals and validated extension points for additional languages
 
@@ -151,10 +151,12 @@ OpenVPN engine; it does not ship a tunnel implementation.
 
 In **Settings**, press **Clean uninstall** and confirm it. One Polkit prompt
 removes the backend package; the action also removes the plugin, its user
-services, owned NetworkManager connections and kill switches, shared Proton
-VPN session, profiles, settings and caches. It restores the exact ProTun
-descriptor that the compatibility repair replaced. If the installer added
-GitHub CLI solely as an orphaned verifier dependency, it removes that too.
+services, owned NetworkManager connections and kill switches, Proton VPN for
+Omarchy's private session, profiles, settings and caches. Shared Proton SSO
+entries and standalone Proton application data are left untouched. It restores
+the exact ProTun descriptor that the compatibility repair replaced. If the
+installer added GitHub CLI solely as an orphaned verifier dependency, it
+removes that too.
 
 Package-manager history and system audit journals are deliberately retained.
 They are operating-system records, not application data, and a package must
