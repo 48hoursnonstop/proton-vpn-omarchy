@@ -7,7 +7,32 @@ import qs.Ui as Ui
 Ui.Button {
   id: root
   property bool spaceHeld: false
+  property bool pointerFocus: false
+  property bool keyboardActivation: false
+  property bool filledSelection: true
+  readonly property bool keyboardFocus: focusable && activeFocus && !pointerFocus
   readonly property bool keyboardPressed: spaceHeld && activeFocus && enabled
+  // A pointer click may retain focus for keyboard navigation, without retaining
+  // the keyboard outline. Hover uses a fill only, never side borders.
+  borderSpec: keyboardFocus ? Border.controlSpec('focus', foreground, accent)
+    : bordered ? Border.controlSpec('normal', foreground, accent) : Border.none()
+  function activateFromKeyboard() {
+    keyboardActivation = true
+    clicked()
+    keyboardActivation = false
+  }
+  Connections {
+    target: root
+    function onClicked() { if (!root.keyboardActivation) root.pointerFocus = true }
+  }
+  Binding {
+    target: root
+    property: 'color'
+    when: root.pointerFocus && !root.hot && !root.keyboardPressed
+    value: root.filledSelection && (root.selected || root.active)
+      ? Style.selectedFillFor(root.foreground, root.accent) : root.background
+    restoreMode: Binding.RestoreBindingOrValue
+  }
   Behavior on opacity { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
 
   Keys.forwardTo: [activationKeys]
@@ -16,11 +41,12 @@ Ui.Button {
     // Consume activation before the toolkit's press-only handlers. Other keys
     // continue to the button (tabs/arrows) and then its containing workspace.
     Keys.onPressed: function(event) {
+      root.pointerFocus = false
       if (event.key === Qt.Key_Space) {
         if (root.focusable && root.enabled && !event.isAutoRepeat) root.spaceHeld = true
         event.accepted = true
       } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-        if (root.focusable && root.enabled && !event.isAutoRepeat) root.clicked()
+        if (root.focusable && root.enabled && !event.isAutoRepeat) root.activateFromKeyboard()
         event.accepted = true
       }
     }
@@ -30,10 +56,10 @@ Ui.Button {
       if (event.isAutoRepeat) return
       var activate = root.keyboardPressed && root.focusable
       root.spaceHeld = false
-      if (activate) root.clicked()
+      if (activate) root.activateFromKeyboard()
     }
   }
-  onActiveFocusChanged: if (!activeFocus) spaceHeld = false
+  onActiveFocusChanged: if (!activeFocus) { spaceHeld = false; pointerFocus = false }
   onEnabledChanged: if (!enabled) spaceHeld = false
 
   Binding {

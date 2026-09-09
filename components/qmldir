@@ -1,6 +1,7 @@
 PanelActionRow 1.0 PanelActionRow.qml
 singleton ProtonUi 1.0 ProtonUi.qml
 ProtonButton 1.0 ProtonButton.qml
+ProtonTabButton 1.0 ProtonTabButton.qml
 ProtonButtonBase 1.0 ProtonButtonBase.qml
 ProtonNotice 1.0 ProtonNotice.qml
 ProtonPanelHero 1.0 ProtonPanelHero.qml

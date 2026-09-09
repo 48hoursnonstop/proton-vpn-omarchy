@@ -206,6 +206,9 @@ FocusScope {
 
   Column {
     id: chrome
+    // Use part of the host's top padding for the 40px close-button hit area,
+    // instead of stacking that padding above the centered header label.
+    y: -Style.space(10)
     width: parent.width
     spacing: Style.space(4)
     RowLayout {

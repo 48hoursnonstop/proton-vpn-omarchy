@@ -119,7 +119,7 @@ Item {
       spacing: Style.space(4)
       Repeater {
         model: ['connection', 'application']
-        delegate: ProtonButton {
+        delegate: ProtonTabButton {
           required property string modelData
           Layout.fillWidth: true
           Layout.preferredWidth: 1

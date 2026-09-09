@@ -52,10 +52,14 @@ CursorSurface {
   signal activated()
   signal hovered()
   property bool spaceHeld: false
+  property bool pointerFocus: false
+  readonly property bool keyboardFocus: activeFocus && !pointerFocus
   readonly property bool pressed: enabled && !busy && (spaceHeld || (rowMouse.pressed && rowMouse.containsMouse))
 
   activeFocusOnTab: enabled && !busy
-  hasCursor: enabled && (hasKeyboardCursor || activeFocus || rowMouse.containsMouse)
+  hasCursor: enabled && (hasKeyboardCursor || keyboardFocus || rowMouse.containsMouse)
+  borderSpec: keyboardFocus || hasKeyboardCursor
+    ? Border.controlSpec('focus', rowForeground, Color.accent) : Border.none()
   Accessible.role: toggleVisible ? Accessible.CheckBox : Accessible.Button
   Accessible.name: title
   Accessible.description: subtitle + (detail ? '. ' + detail : '')
@@ -66,6 +70,7 @@ CursorSurface {
   Accessible.onToggleAction: trigger()
   function trigger() { if (enabled && !busy) activated() }
   Keys.onPressed: function(event) {
+    pointerFocus = false
     if (event.key === Qt.Key_Space) {
       if (!event.isAutoRepeat && enabled && !busy) spaceHeld = true
       event.accepted = true
@@ -82,7 +87,7 @@ CursorSurface {
     spaceHeld = false
     if (activate) trigger()
   }
-  onActiveFocusChanged: if (!activeFocus) spaceHeld = false
+  onActiveFocusChanged: if (!activeFocus) { spaceHeld = false; pointerFocus = false }
   onEnabledChanged: if (!enabled) spaceHeld = false
   onBusyChanged: if (busy) spaceHeld = false
   foreground: rowForeground
@@ -237,7 +242,7 @@ CursorSurface {
     hoverEnabled: true
     cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
     onEntered: root.hovered()
-    onPressed: root.forceActiveFocus(Qt.MouseFocusReason)
+    onPressed: { root.pointerFocus = true; root.forceActiveFocus(Qt.MouseFocusReason) }
     onClicked: root.trigger()
   }
 }

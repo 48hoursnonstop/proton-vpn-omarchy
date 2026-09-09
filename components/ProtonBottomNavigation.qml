@@ -12,7 +12,15 @@ Item {
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   signal routeRequested(string route)
-  implicitHeight: tabs.implicitHeight + Style.space(14)
+  implicitHeight: tabs.implicitHeight + Style.space(6)
+  readonly property real tabHeight: {
+    var result = ProtonUi.controlHeight
+    for (var i = 0; i < repeater.count; ++i) {
+      var tab = repeater.itemAt(i)
+      if (tab) result = Math.max(result, tab.implicitHeight)
+    }
+    return result
+  }
   onCurrentRouteChanged: Qt.callLater(revealCurrent)
   onWidthChanged: Qt.callLater(revealCurrent)
 
@@ -54,31 +62,24 @@ Item {
       Repeater {
         id: repeater
         model: root.destinations
-        delegate: ProtonButton {
+        delegate: ProtonTabButton {
           required property var modelData
-          width: Math.max(implicitWidth,
+          width: Math.max(Style.space(48),
             (viewport.width - tabs.spacing * (repeater.count - 1)) / Math.max(1, repeater.count))
+          height: root.tabHeight
           onActiveFocusChanged: if (activeFocus) root.reveal(this)
           label: String(modelData.label || '')
           selected: root.currentRoute === String(modelData.route || '')
           foreground: root.foreground
           fontFamily: root.fontFamily
-          fontSize: Style.font.bodySmall
-          horizontalPadding: Style.space(4)
+          fontSize: viewport.width < Style.space(330) ? Style.font.caption : Style.font.bodySmall
+          horizontalPadding: viewport.width < Style.space(330) ? 0 : Style.space(4)
           Accessible.role: Accessible.PageTab
           Accessible.name: label
           Accessible.selected: selected
           onClicked: root.routeRequested(String(modelData.route || 'home'))
           Keys.onLeftPressed: root.move(-1)
           Keys.onRightPressed: root.move(1)
-          Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: Math.max(2, Style.space(2))
-            visible: parent.selected
-            color: root.foreground
-          }
         }
       }
     }

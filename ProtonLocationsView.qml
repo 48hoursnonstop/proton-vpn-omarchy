@@ -681,6 +681,8 @@ Item {
 
       ProtonTextField {
         id: searchField
+        compact: true
+        rightPadding: ProtonUi.controlHeight
         Layout.fillWidth: true
         placeholderText: root.label('search_locations')
         foreground: root.foreground
@@ -698,30 +700,30 @@ Item {
           }
           else remoteLookupTimer.stop()
         }
-      }
-
-      ProtonIconButton {
-        visible: root.searchQuery.length > 0
-        iconName: 'cross'
-        foreground: root.foreground
-        fontFamily: root.fontFamily
-        tooltipText: root.label('clear_search')
-        onClicked: root.clearSearch()
+        ProtonIconButton {
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
+          visible: root.searchQuery.length > 0
+          iconName: 'cross'
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          tooltipText: root.label('clear_search')
+          onClicked: root.clearSearch()
+        }
       }
     }
 
-    Text {
+    Rectangle {
       objectName: 'search-progress'
       width: parent.width
-      // Keep the same line box through debounce and response, avoiding a jump
-      // between the field and the results while the user is typing.
-      text: root.label('searching_locations')
+      height: Style.space(2)
+      // A fixed progress line avoids an empty text row and layout shifts.
+      Accessible.role: Accessible.StaticText
+      Accessible.name: root.label('searching_locations')
       opacity: root.searchPending ? 1 : 0
       Behavior on opacity { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
       Accessible.ignored: !root.searchPending
-      color: root.dim
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.bodySmall
+      color: Color.accent
     }
 
     Timer {
@@ -778,12 +780,10 @@ Item {
       }
     }
 
-    GridLayout {
+    Flow {
       visible: root.selectedLocation === null && root.section === 'countries'
       width: parent.width
-      columns: width < Style.space(420) ? 2 : 4
-      rowSpacing: Style.space(5)
-      columnSpacing: Style.space(5)
+      spacing: Style.space(4)
 
       Repeater {
         model: [
@@ -793,17 +793,16 @@ Item {
           { value: 'tor', label: 'Tor', icon: 'brand_tor' }
         ]
 
-        delegate: ProtonIconButton {
+        delegate: ProtonButton {
           required property var modelData
-          Layout.fillWidth: true
-          Layout.minimumWidth: 0
-          Layout.preferredWidth: 1
-          iconName: String(modelData.icon)
           label: String(modelData.label)
           foreground: root.foreground
           fontFamily: root.fontFamily
-          bordered: true
-          active: root.feature === String(modelData.value)
+          fontSize: Style.font.bodySmall
+          selected: root.feature === String(modelData.value)
+          Accessible.role: Accessible.RadioButton
+          Accessible.checkable: true
+          Accessible.checked: selected
           onClicked: root.selectFeature(String(modelData.value))
         }
       }

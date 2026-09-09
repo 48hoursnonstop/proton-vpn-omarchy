@@ -94,6 +94,7 @@ ShellRoot {
         }
       } else if (scenario === 'application') workspace.currentPage.settingsSection = 'application'
       else if (scenario === 'advanced') workspace.currentPage.advancedExpanded = true
+      else if (scenario === 'protocols') workspace.currentPage.openPicker = 'protocol'
       else if (scenario === 'edit-profile') {
         workspace.currentPage.newProfile()
         workspace.currentPage.iconPickerVisible = true
