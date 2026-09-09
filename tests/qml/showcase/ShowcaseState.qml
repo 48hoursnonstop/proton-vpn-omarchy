@@ -8,7 +8,7 @@ QtObject {
   property bool agentAvailable: true
   property bool agentConnecting: false
   property bool backendReady: true
-  property string clientVersion: '0.9.6-rc4'
+  property string clientVersion: '0.9.6'
   property string backendCoreVersion: '0.9.6'
   property bool storeReady: true
   property bool onboardingComplete: true
