@@ -105,6 +105,18 @@ Update the Git-managed frontend with:
 omarchy plugin update proton.omarchy
 ```
 
+If the panel still shows the previous interface after updating, restart the
+Omarchy shell once to reload its QML components:
+
+```bash
+omarchy restart shell
+```
+
+For 0.9.6, the main navigation is at the top of the panel. Navigation still
+at the bottom indicates that the shell is displaying the older interface,
+even if the files on disk have already been updated. Restarting the shell
+recreates the desktop bar and panels; the VPN backend runs separately.
+
 When that frontend requires a newer backend, opening the plugin offers the same
 signed update flow. Backend updates are also available as `.pkg.tar.zst`
 assets in the core repository's GitHub Releases for manual installation.
