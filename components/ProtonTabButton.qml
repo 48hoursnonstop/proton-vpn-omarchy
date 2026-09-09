@@ -1,13 +1,14 @@
 import QtQuick
 import qs.Commons
 
-// Selection belongs to the underline. Keyboard focus strengthens that same
-// indicator instead of adding a second frame around the destination.
+// Keep the native selected fill and underline. Hover/focus must not replace
+// that fill or add a second frame around the selected destination.
 ProtonButton {
   id: root
-  filledSelection: false
   borderSpec: Border.none()
   color: keyboardPressed ? Style.pressedFillFor(foreground, accent)
+    : selected ? Style.selectedFillFor(foreground, accent)
+    : hot ? Style.hoverFillFor(foreground, accent)
     : 'transparent'
   Accessible.role: Accessible.PageTab
   Accessible.selected: selected

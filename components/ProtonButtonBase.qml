@@ -9,7 +9,6 @@ Ui.Button {
   property bool spaceHeld: false
   property bool pointerFocus: false
   property bool keyboardActivation: false
-  property bool filledSelection: true
   readonly property bool keyboardFocus: focusable && activeFocus && !pointerFocus
   readonly property bool keyboardPressed: spaceHeld && activeFocus && enabled
   // A pointer click may retain focus for keyboard navigation, without retaining
@@ -29,7 +28,7 @@ Ui.Button {
     target: root
     property: 'color'
     when: root.pointerFocus && !root.hot && !root.keyboardPressed
-    value: root.filledSelection && (root.selected || root.active)
+    value: root.selected || root.active
       ? Style.selectedFillFor(root.foreground, root.accent) : root.background
     restoreMode: Binding.RestoreBindingOrValue
   }

@@ -8,14 +8,14 @@ Backend, keyring and network behavior are outside this change.
 | Category | Evidence | Result |
 | --- | --- | --- |
 | Typography | Spanish/English tabs and compact search, including 320px renders | Tabs wrap within equal-width destinations; search keeps a stable accessible name |
-| Surfaces | Native button/cursor paint, click/focus tests, production renders | Pointer selection no longer leaves side frames; tabs use underlines |
+| Surfaces | Native button/cursor paint, click/focus tests, production renders | Pointer selection retains its native fill and underline without stuck hover/focus framing |
 | Animations | Existing 120ms button/page behavior and motion runtime fixture | Existing transitions pass; no new motion choreography |
 | Icons | Search magnifier, clear action and protocol rows | Existing native-sized assets; unnecessary feature-button icons removed |
 | Performance | Shared component changes and runtime suite | No polling, network or backend changes |
 
 | Severity | Location | Before | After | Why |
 | --- | --- | --- | --- | --- |
-| MEDIUM | ProtonButtonBase, PanelActionRow, ProtonBottomNavigation, ProtonSettingsView | Pointer clicks retained native keyboard borders/fills alongside selection | Pointer focus stays functional without persistent framing; keyboard keeps an explicit indicator; both tab groups share ProtonTabButton | Distinguish selection, hover and keyboard focus |
+| MEDIUM | ProtonButtonBase, PanelActionRow, ProtonBottomNavigation, ProtonSettingsView | Pointer clicks retained native keyboard borders/fills alongside selection | The original selected fill and underline remain; hover/focus no longer override the selected tab or leave a frame; keyboard keeps an explicit indicator | Distinguish selection, hover and keyboard focus |
 | MEDIUM | ProtonLocationsView, ProtonTextField | Tall caption-plus-input search, separate clear action that resized it, reserved empty progress text row | Single 40px search row with magnifier, internal clear action and thin progress line; form captions remain | Keep routine search compact and stable while typing |
 | MEDIUM | ProtonLocationsView | Four boxed feature buttons in a large grid | Compact wrapping single-choice controls with one selected fill | Reduce visual weight without losing selected state or radio semantics |
 | MEDIUM | ProtonWorkspace | Host top padding plus centered label in a 40px header row | Header hit area overlaps 10 logical pixels of the existing top inset | Remove accumulated whitespace while retaining the close target |

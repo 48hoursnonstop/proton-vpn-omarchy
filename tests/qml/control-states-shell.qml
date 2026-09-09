@@ -54,7 +54,7 @@ ShellRoot {
         break
       case 1:
         check(workspace.route === 'locations', 'pointer changes page')
-        check(target.activeFocus && target.pointerFocus && noFrame(target) && target.color.a === 0, 'clicked tab retains focus without frame or dimming: ' + [target.activeFocus, target.pointerFocus, noFrame(target), target.color.a])
+        check(target.activeFocus && target.pointerFocus && noFrame(target) && target.color === Style.selectedFillFor(target.foreground, target.accent), 'clicked tab retains the native selected fill without a stuck focus frame or fill')
         search = find(workspace, 'Search country, city or server')
         check(search.height >= 40 && search.height <= 42, 'search is a single 40px row')
         searchWidth = search.width
@@ -72,7 +72,7 @@ ShellRoot {
         break
       case 4:
         check(workspace.currentPage.settingsSection === 'application', 'pointer changes settings section')
-        check(target.pointerFocus && noFrame(target) && target.color.a === 0, 'settings tabs use the same clean pointer state')
+        check(target.pointerFocus && noFrame(target) && target.color === Style.selectedFillFor(target.foreground, target.accent), 'settings tabs retain the native selected fill without stuck focus paint')
         events.keyClick(Qt.Key_Tab, Qt.NoModifier, -1)
         check(!target.activeFocus, 'Tab can leave a pointer-focused tab')
         click(find(workspace, 'Connection'))
