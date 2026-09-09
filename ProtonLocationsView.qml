@@ -13,7 +13,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string section: 'countries'
   property string feature: 'standard'
@@ -23,6 +23,7 @@ Item {
   property string selectedKind: ''
   property var currentSelection: null
   property bool restoreSelectionPending: false
+  property var browseContext: null
 
   signal locationSelected(var selection)
 
@@ -30,6 +31,8 @@ Item {
   readonly property bool searching: selectedLocation === null && searchQuery.length > 0
   readonly property bool showingServers: selectedLocation !== null
   readonly property bool subpageActive: selectedLocation !== null
+  readonly property bool searchPending: (searching && (searchDebounce.running || remoteLookupTimer.running)) ||
+    (vpnState && (vpnState.serversLoading || vpnState.serverLookupLoading))
   readonly property var baseLocations: section === 'gateways'
     ? (vpnState ? vpnState.gateways : [])
     : (vpnState ? vpnState.countries : [])
@@ -38,6 +41,45 @@ Item {
   readonly property var searchResults: buildSearchResults()
 
   implicitHeight: content.implicitHeight
+
+  function focusSearch() { searchField.forceActiveFocus() }
+
+  function captureViewState() {
+    return { query: searchField.text, feature: feature, kind: selectedKind,
+      location: selectedLocation ? String(selectedKind === 'gateway' ? selectedLocation.name : selectedLocation.code) : '',
+      locationsY: locationsList.contentY, searchY: searchResultsList.contentY,
+      browse: browseContext }
+  }
+
+  function restoreViewState(state) {
+    if (!state) return
+    feature = ['standard', 'secure_core', 'p2p', 'tor'].indexOf(state.feature) >= 0 ? state.feature : 'standard'
+    browseContext = state.browse || null
+    resetSelection()
+    for (var i = 0; i < baseLocations.length; ++i) {
+      var item = baseLocations[i]
+      if (state.location && String(state.kind === 'gateway' ? item.name : item.code) === state.location) {
+        selectedLocation = item
+        selectedKind = state.kind
+        break
+      }
+    }
+    searchField.text = String(state.query || '')
+    if (selectedLocation) { searchDebounce.stop(); requestServers() }
+    Qt.callLater(function() {
+      locationsList.contentY = Math.max(0, Math.min(Number(state.locationsY || 0), locationsList.contentHeight - locationsList.height))
+      searchResultsList.contentY = Math.max(0, Math.min(Number(state.searchY || 0), searchResultsList.contentHeight - searchResultsList.height))
+    })
+  }
+
+  function submitSearch() {
+    searchDebounce.stop()
+    requestServers()
+    if (vpnState && Search.canonicalServerLookup(searchQuery)) {
+      remoteLookupTimer.stop()
+      vpnState.lookupServer(searchQuery)
+    }
+  }
 
   function label(key) {
     return strings ? strings.text(key) : key
@@ -405,10 +447,11 @@ Item {
   }
 
   function clearSearch() {
+    searchField.text = ''
     searchDebounce.stop()
     remoteLookupTimer.stop()
-    searchField.text = ''
     requestServers()
+    focusSearch()
   }
 
   function setSearchQuery(value) {
@@ -424,6 +467,7 @@ Item {
   function navigateBack() {
     if (selectedLocation === null) return false
     resetSelection()
+    if (browseContext) restoreViewState(browseContext)
     return true
   }
 
@@ -442,10 +486,14 @@ Item {
   }
 
   function openLocation(item, kind) {
+    browseContext = captureViewState()
+    browseContext.browse = null
     restoreSelectionPending = false
     selectedLocation = item
     selectedKind = kind
     searchField.text = ''
+    searchDebounce.stop()
+    remoteLookupTimer.stop()
     requestServers()
   }
 
@@ -592,14 +640,13 @@ Item {
       spacing: Style.space(8)
 
       ProtonIconButton {
+        objectName: 'locations-back'
         visible: root.selectedLocation !== null
         iconName: 'chevron_left'
         foreground: root.foreground
         fontFamily: root.fontFamily
         tooltipText: root.label('locations')
-        onClicked: {
-          root.resetSelection()
-        }
+        onClicked: root.navigateBack()
       }
 
       Text {
@@ -632,7 +679,7 @@ Item {
       width: parent.width
       spacing: Style.space(5)
 
-      TextField {
+      ProtonTextField {
         id: searchField
         Layout.fillWidth: true
         placeholderText: root.label('search_locations')
@@ -642,6 +689,7 @@ Item {
         font.pixelSize: Style.font.body
         horizontalPadding: Style.spacing.controlGap
         verticalPadding: Style.spacing.controlPaddingY
+        onAccepted: root.submitSearch()
         onTextChanged: {
           searchDebounce.restart()
           if (Search.canonicalServerLookup(text)) {
@@ -660,6 +708,20 @@ Item {
         tooltipText: root.label('clear_search')
         onClicked: root.clearSearch()
       }
+    }
+
+    Text {
+      objectName: 'search-progress'
+      width: parent.width
+      // Keep the same line box through debounce and response, avoiding a jump
+      // between the field and the results while the user is typing.
+      text: root.label('searching_locations')
+      opacity: root.searchPending ? 1 : 0
+      Behavior on opacity { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
+      Accessible.ignored: !root.searchPending
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
     }
 
     Timer {
@@ -694,9 +756,9 @@ Item {
       width: parent.width
       spacing: Style.space(8)
 
-      Button {
+      ProtonButton {
         Layout.fillWidth: true
-        text: root.label('countries')
+        label: root.label('countries')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: true
@@ -704,10 +766,10 @@ Item {
         onClicked: root.selectSection('countries')
       }
 
-      Button {
+      ProtonButton {
         visible: root.vpnState && root.vpnState.gateways.length > 0
         Layout.fillWidth: true
-        text: root.label('gateways')
+        label: root.label('gateways')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: true
@@ -716,10 +778,12 @@ Item {
       }
     }
 
-    RowLayout {
+    GridLayout {
       visible: root.selectedLocation === null && root.section === 'countries'
       width: parent.width
-      spacing: Style.space(5)
+      columns: width < Style.space(420) ? 2 : 4
+      rowSpacing: Style.space(5)
+      columnSpacing: Style.space(5)
 
       Repeater {
         model: [
@@ -732,6 +796,8 @@ Item {
         delegate: ProtonIconButton {
           required property var modelData
           Layout.fillWidth: true
+          Layout.minimumWidth: 0
+          Layout.preferredWidth: 1
           iconName: String(modelData.icon)
           label: String(modelData.label)
           foreground: root.foreground
@@ -836,7 +902,7 @@ Item {
       onActivated: root.chooseBestLocation('random', false)
     }
 
-    ListView {
+    ProtonListView {
       id: locationsList
       visible: !root.showingServers && !root.searching
       width: parent.width
@@ -867,7 +933,7 @@ Item {
       }
     }
 
-    ListView {
+    ProtonListView {
       id: searchResultsList
       visible: root.searching
       width: parent.width
@@ -939,7 +1005,7 @@ Item {
       }
     }
 
-    ListView {
+    ProtonListView {
       id: logicalTargetsList
       visible: root.selectedLocation !== null && root.logicalTargets.length > 0
       width: parent.width
@@ -970,7 +1036,7 @@ Item {
       }
     }
 
-    ListView {
+    ProtonListView {
       id: serversList
       visible: root.showingServers
       width: parent.width
@@ -1012,8 +1078,9 @@ Item {
     }
 
     Text {
+      objectName: 'search-empty'
       visible: (root.showingServers || root.searching) && root.vpnState &&
-        !root.vpnState.locationsLoading && !root.vpnState.serversLoading &&
+        !root.searchPending && !root.vpnState.locationsLoading && !root.vpnState.serversLoading &&
         !root.vpnState.serverLookupLoading && root.vpnState.servers.length === 0
         && (!root.searching || root.searchResults.length === 0)
       width: parent.width
@@ -1025,15 +1092,5 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    Text {
-      visible: root.vpnState &&
-        (root.vpnState.serversLoading || root.vpnState.serverLookupLoading)
-      width: parent.width
-      text: root.label('loading_servers')
-      color: root.dim
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.bodySmall
-      horizontalAlignment: Text.AlignHCenter
-    }
   }
 }

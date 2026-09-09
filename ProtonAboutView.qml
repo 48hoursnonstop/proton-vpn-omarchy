@@ -10,7 +10,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
   implicitHeight: content.implicitHeight
@@ -44,7 +44,7 @@ Item {
       rowFontFamily: root.fontFamily
       iconName: 'brand_proton_vpn'
       title: root.label('version')
-      subtitle: root.vpnState ? root.vpnState.clientVersion : '0.9.5'
+      subtitle: root.vpnState ? root.vpnState.clientVersion : '0.9.6-rc4'
     }
 
     PanelActionRow {

@@ -19,7 +19,7 @@ Item {
   property alias metaOpacity: metaText.opacity
   property Component trailingControl: null
 
-  readonly property color dim: Qt.darker(foreground, 1.4)
+  readonly property color dim: ProtonUi.secondaryText(foreground)
   readonly property real trailingInset:
     trailingLoader.item && trailingLoader.item.visible
       ? trailingLoader.width + Style.space(12) : 0
@@ -70,7 +70,7 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: Style.font.title
         font.bold: true
-        elide: Text.ElideRight
+        wrapMode: Text.Wrap
       }
 
       Item {
@@ -107,14 +107,13 @@ Item {
     Text {
       id: metaText
       width: parent.width
-      text: root.meta.toUpperCase()
+      text: root.meta
       textFormat: Text.PlainText
       visible: text !== ""
       color: root.dim
       font.family: root.fontFamily
-      font.pixelSize: Style.font.caption
-      font.bold: true
-      font.letterSpacing: 1.2
+      font.pixelSize: Style.font.bodySmall
+      lineHeight: 1.4
       wrapMode: Text.WordWrap
       elide: Text.ElideNone
     }

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+shell_root="${OMARCHY_SHELL_ROOT:-/usr/share/omarchy/shell}"
+command -v quickshell >/dev/null
+[[ -d $shell_root/Commons && -d $shell_root/Ui ]]
+work="$(mktemp -d /tmp/proton-ui-runtime.XXXXXX)"
+trap 'rm -rf -- "$work"' EXIT
+mkdir -m 700 "$work/runtime" "$work/config"
+cp "$root"/*.qml "$work/"
+cp -a "$root/components" "$root/assets" "$root/i18n" "$work/"
+cp "$root/tests/qml/showcase/ShowcaseState.qml" "$work/"
+ln -s "$shell_root/Commons" "$work/Commons"
+ln -s "$shell_root/Ui" "$work/Ui"
+for fixture in locale location-search pagination profile-destination workspace interaction traffic-history motion; do
+  cp "$root/tests/qml/$fixture-shell.qml" "$work/shell.qml"
+  if ! output="$(env QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR="$work/runtime" \
+    XDG_CONFIG_HOME="$work/config" timeout -k 3s 15s quickshell --no-color -p "$work" 2>&1)"; then
+    printf '%s\nUI RUNTIME: %s failed\n' "$output" "$fixture" >&2
+    exit 1
+  fi
+  if ! rg -q '_QML true' <<<"$output" || rg -qi \
+    'Cannot open:|ReferenceError|TypeError|Error:|Cannot assign|Unable to assign|is not a type|Binding loop|failed to load' <<<"$output"; then
+    printf '%s\nUI RUNTIME: %s failed\n' "$output" "$fixture" >&2
+    exit 1
+  fi
+  printf 'UI RUNTIME: %s PASS\n' "$fixture"
+done
+
+# The native layer host needs a Wayland backend even when closed. This check
+# creates no visible surface, changes no bar configuration and starts no agent.
+if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
+  cp "$root/tests/qml/host-shell.qml" "$work/shell.qml"
+  if ! output="$(env QT_QPA_PLATFORM=wayland XDG_CONFIG_HOME="$work/config" \
+    timeout -k 3s 10s quickshell --no-color -p "$work" 2>&1)" || \
+    ! rg -q 'HOST_QML true' <<<"$output" || \
+    rg -qi 'Error:|Cannot assign|Unable to assign|Binding loop' <<<"$output"; then
+    printf '%s\nUI RUNTIME: native host failed\n' "$output" >&2
+    exit 1
+  fi
+  printf 'UI RUNTIME: native host PASS (closed)\n'
+else
+  printf 'UI RUNTIME: native host SKIP (Wayland unavailable)\n'
+fi

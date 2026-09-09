@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import qs.Commons
 import qs.Ui
+import 'components'
 
 Item {
   id: root
@@ -25,9 +26,9 @@ Item {
 
     PanelSeparator { foreground: root.foreground }
 
-    Button {
+    ProtonButton {
       width: parent.width
-      text: root.uninstallerState && root.uninstallerState.running
+      label: root.uninstallerState && root.uninstallerState.running
         ? root.label('uninstalling')
         : root.confirming
           ? root.label('confirm_clean_uninstall')
@@ -70,11 +71,11 @@ Item {
       horizontalAlignment: Text.AlignHCenter
     }
 
-    Button {
+    ProtonButton {
       visible: root.confirming &&
         !(root.uninstallerState && root.uninstallerState.running)
       width: parent.width
-      text: root.label('cancel')
+      label: root.label('cancel')
       foreground: root.foreground
       fontFamily: root.fontFamily
       bordered: false

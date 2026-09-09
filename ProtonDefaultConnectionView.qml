@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
   implicitHeight: content.implicitHeight
@@ -108,14 +108,14 @@ Item {
       }
     }
 
-    PanelSectionHeader {
+    ProtonSectionHeader {
       visible: root.vpnState && root.vpnState.profiles.length > 0
-      text: root.label('profiles').toUpperCase()
+      text: root.label('profiles')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
 
-    ListView {
+    ProtonListView {
       visible: root.vpnState && root.vpnState.profiles.length > 0
       width: parent.width
       height: Math.min(contentHeight, Style.space(190))
@@ -144,14 +144,14 @@ Item {
       }
     }
 
-    PanelSectionHeader {
+    ProtonSectionHeader {
       visible: root.vpnState && root.vpnState.recents.length > 0
-      text: root.label('recents').toUpperCase()
+      text: root.label('recents')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
 
-    ListView {
+    ProtonListView {
       visible: root.vpnState && root.vpnState.recents.length > 0
       width: parent.width
       height: Math.min(contentHeight, Style.space(190))

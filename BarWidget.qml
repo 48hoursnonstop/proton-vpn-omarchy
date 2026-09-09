@@ -16,6 +16,11 @@ BarWidget {
   property bool panelRequested: false
   property bool pendingOpen: false
   property string pendingRoute: ''
+  Binding {
+    target: ProtonUi
+    property: 'reducedMotion'
+    value: !!root.setting('reducedMotion', false)
+  }
 
   // Bar chrome uses barForeground rather than the popup/content foreground.
   // Omarchy changes this value when transparent-bar contrast is active.

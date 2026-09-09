@@ -12,7 +12,6 @@ Item {
   property bool information: false
   property string state: ''
   property real iconSize: Style.bar.iconCanvas
-  property real connectionPulseOpacity: 1.0
   implicitWidth: iconSize
   implicitHeight: iconSize
 
@@ -37,7 +36,8 @@ Item {
     sourceSize.width: Math.round(root.iconSize * Screen.devicePixelRatio)
     sourceSize.height: Math.round(root.iconSize * Screen.devicePixelRatio)
     visible: false
-    layer.enabled: true
+    // Image is already a texture provider; an extra hidden layer can go stale
+    // when the surrounding workspace has opacity animations.
   }
 
   MultiEffect {
@@ -46,13 +46,6 @@ Item {
     source: androidStatusIcon
     colorization: 1.0
     colorizationColor: root.statusColor
-    opacity: root.effectiveState === 'connecting' ? root.connectionPulseOpacity : 1.0
   }
 
-  SequentialAnimation on connectionPulseOpacity {
-    running: root.effectiveState === 'connecting'
-    loops: Animation.Infinite
-    NumberAnimation { from: 0.55; to: 1.0; duration: 420 }
-    NumberAnimation { from: 1.0; to: 0.55; duration: 420 }
-  }
 }

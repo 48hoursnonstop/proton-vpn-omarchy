@@ -11,7 +11,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
   implicitHeight: content.implicitHeight
@@ -97,13 +97,13 @@ Item {
         ? root.label('available') : root.label('unavailable')
     }
 
-    PanelSectionHeader {
-      text: root.label('diagnostic_sources').toUpperCase()
+    ProtonSectionHeader {
+      text: root.label('diagnostic_sources')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
 
-    ListView {
+    ProtonListView {
       width: parent.width
       height: Math.min(contentHeight, Style.space(220))
       implicitHeight: height
@@ -146,9 +146,9 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    Button {
+    ProtonButton {
       width: parent.width
-      text: root.vpnState && root.vpnState.diagnosticsLoading
+      label: root.vpnState && root.vpnState.diagnosticsLoading
         ? root.label('checking_diagnostics') : root.label('refresh')
       foreground: root.foreground
       fontFamily: root.fontFamily

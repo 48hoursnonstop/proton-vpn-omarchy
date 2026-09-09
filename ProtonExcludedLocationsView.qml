@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property var selectedCountry: null
   property string selectedState: ''
@@ -104,9 +104,9 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    PanelSectionHeader {
+    ProtonSectionHeader {
       visible: root.vpnState && root.vpnState.excludedLocations.length > 0
-      text: root.label('excluded').toUpperCase()
+      text: root.label('excluded')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
@@ -148,8 +148,8 @@ Item {
 
     PanelSeparator { foreground: root.foreground }
 
-    PanelSectionHeader {
-      text: root.label('add_location').toUpperCase()
+    ProtonSectionHeader {
+      text: root.label('add_location')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
@@ -168,7 +168,7 @@ Item {
       }
     }
 
-    ListView {
+    ProtonListView {
       visible: root.selectedCountry === null
       width: parent.width
       height: Math.min(contentHeight, Style.space(410))

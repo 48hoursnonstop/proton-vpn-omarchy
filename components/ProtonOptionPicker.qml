@@ -1,7 +1,7 @@
 import QtQuick
 import qs.Commons
 
-// Inline mobile-style single-choice list. Callers provide exact choices;
+// Inline native single-choice list. Callers provide exact choices;
 // opening a row never mutates state and choosing one value takes one action.
 Item {
   id: root
@@ -34,6 +34,8 @@ Item {
         title: String(modelData.label || modelData.value || '')
         subtitle: String(modelData.subtitle || '')
         detailIconName: root.currentValue === modelData.value ? 'checkmark' : ''
+        Accessible.role: Accessible.RadioButton
+        Accessible.checkable: true
         checked: root.currentValue === modelData.value
         busy: root.busy
         onActivated: root.selected(modelData.value)

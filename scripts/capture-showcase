@@ -5,7 +5,7 @@ root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 shell_root="${OMARCHY_SHELL_ROOT:-/usr/share/omarchy/shell}"
 omarchy_root="${OMARCHY_PATH:-/usr/share/omarchy}"
 output_dir="${1:-$root/docs/screenshots}"
-qpa_platform="${PROTON_SHOWCASE_QPA_PLATFORM:-wayland}"
+qpa_platform=offscreen
 host_runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 only_route="${PROTON_SHOWCASE_ONLY:-}"
 capture_scale="${PROTON_SHOWCASE_SCALE:-2}"
@@ -45,25 +45,26 @@ ln -s "$shell_root/Commons" "$qml_root/Commons"
 ln -s "$shell_root/Ui" "$qml_root/Ui"
 
 prepare_theme() {
-  local slug="$1" capture_home="$2"
+  local slug="$1" capture_theme="$2"
   local source_theme="$omarchy_root/themes/$slug"
-  local next_theme="$capture_home/.local/state/omarchy/current/next-theme"
-  local current_theme="$capture_home/.local/state/omarchy/current/theme"
-
   [[ -f $source_theme/colors.toml ]] || {
     printf 'SHOWCASE: theme not found: %s\n' "$slug" >&2
     return 2
   }
-  mkdir -p "$next_theme" "$capture_home/.config/omarchy"
-  cp -a "$source_theme/." "$next_theme/"
-  env HOME="$capture_home" OMARCHY_PATH="$omarchy_root" \
-    omarchy-theme-set-templates
-  mv "$next_theme" "$current_theme"
+  mkdir -p "$capture_theme"
+  cp -a "$source_theme/." "$capture_theme/"
+  # Render only temporary files with the native renderer, leaving HOME and the
+  # active desktop theme untouched. Ignore user-supplied template mutations.
+  sed -e 's|^NEXT_THEME_DIR=.*|NEXT_THEME_DIR="$PROTON_CAPTURE_THEME"|' \
+      -e 's|^USER_TEMPLATES_DIR=.*|USER_TEMPLATES_DIR="/nonexistent"|' \
+    "$(command -v omarchy-theme-set-templates)" > "$work/render-theme"
+  env PROTON_CAPTURE_THEME="$capture_theme" OMARCHY_PATH="$omarchy_root" \
+    bash "$work/render-theme"
 }
 
 capture() {
   local route="$1" theme="$2" filename="$3"
-  local capture_home="$work/home-$theme"
+  local capture_theme="$work/theme-$theme"
   local isolated_runtime="$work/runtime-$theme-$route"
   local runtime_dir="$host_runtime"
   local destination="$output_dir/$filename"
@@ -73,8 +74,8 @@ capture() {
     return
   fi
 
-  if [[ ! -d $capture_home/.local/state/omarchy/current/theme ]]; then
-    prepare_theme "$theme" "$capture_home"
+  if [[ ! -d $capture_theme ]]; then
+    prepare_theme "$theme" "$capture_theme"
   fi
   if [[ $qpa_platform == offscreen ]]; then
     runtime_dir="$isolated_runtime"
@@ -83,17 +84,23 @@ capture() {
 
   set +e
   output="$(
-    env HOME="$capture_home" \
-      XDG_CONFIG_HOME="$capture_home/.config" \
+    env PROTON_SHOWCASE_THEME_PATH="$capture_theme" \
+      XDG_CONFIG_HOME="$work/config" \
       XDG_RUNTIME_DIR="$runtime_dir" \
       QT_QPA_PLATFORM="$qpa_platform" \
+      QT_QUICK_BACKEND=rhi \
+      QSG_RENDER_LOOP=basic \
+      QSG_RHI_BACKEND="${PROTON_SHOWCASE_RHI:-opengl}" \
       QT_SCALE_FACTOR="$capture_scale" \
       PROTON_SHOWCASE_ROUTE="$route" \
       PROTON_SHOWCASE_OUTPUT="$destination" \
-      quickshell --no-color -p "$qml_root" 2>&1
+      timeout -k 3s 25s quickshell --no-color -p "$qml_root" 2>&1
   )"
   result=$?
   set -e
+  if [[ ${PROTON_SHOWCASE_LOGS:-0} == 1 ]]; then
+    printf '%s\n' "$output" > "$destination.log"
+  fi
   if (( result != 0 )); then
     printf '%s\n' "$output" >&2
     printf 'SHOWCASE: %s/%s exited %d\n' "$theme" "$route" "$result" >&2
@@ -106,7 +113,7 @@ capture() {
     exit 1
   fi
   if grep -Eiq \
-    'ReferenceError|TypeError|Cannot assign|Unable to assign|is not a type|Binding loop|failed to load' \
+    'Cannot open:|ReferenceError|TypeError|Cannot assign|Unable to assign|is not a type|Binding loop|failed to load' \
     <<<"$output"; then
     printf '%s\n' "$output" >&2
     printf 'SHOWCASE: QML error in %s/%s\n' "$theme" "$route" >&2

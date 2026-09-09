@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import qs.Commons
 import qs.Ui
+import 'components'
 import 'components' as ProtonComponents
 
 Item {
@@ -12,7 +13,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
   readonly property bool busy: installerState ? installerState.running : false
@@ -122,11 +123,11 @@ Item {
       horizontalAlignment: Text.AlignHCenter
     }
 
-    Button {
+    ProtonButton {
       id: installButton
       visible: !root.busy && (!root.installerState || !root.installerState.agentReady)
       width: parent.width
-      text: root.failed ? root.label('try_again')
+      label: root.failed ? root.label('try_again')
         : root.repairing ? root.label('repair_backend')
           : root.updating ? root.label('update_backend') : root.label('install_backend')
       foreground: root.foreground

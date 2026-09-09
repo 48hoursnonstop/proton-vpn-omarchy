@@ -8,9 +8,10 @@ QtObject {
   property bool agentAvailable: true
   property bool agentConnecting: false
   property bool backendReady: true
-  property string clientVersion: '0.9.5'
-  property string backendCoreVersion: '0.9.5'
+  property string clientVersion: '0.9.6-rc4'
+  property string backendCoreVersion: '0.9.6'
   property bool storeReady: true
+  property bool onboardingComplete: true
   property bool signedIn: true
   property bool connected: true
   property bool connecting: false
@@ -38,6 +39,21 @@ QtObject {
   property double downloadBytesPerSecond: 2752512
   property double uploadBytesPerSecond: 438272
   property int trafficStep: 0
+  readonly property QtObject trafficMonitor: ProtonTrafficHistory { vpnState: root }
+  function seedTrafficHistory() {
+    // Publication only: a complete synthetic window, never user traffic.
+    var now = Date.now(), points = []
+    for (var i = 0; i < 300; ++i) points.push({
+      time: now - (299 - i) * 1000,
+      download: 1048576 * (2 + Math.sin(i / 17) + 0.4 * Math.sin(i / 5)),
+      upload: 262144 * (1.5 + Math.sin(i / 23))
+    })
+    trafficMonitor.samples = points
+    trafficMonitor.clockMs = now
+    trafficMonitor.lastAt = now
+    trafficMonitor.lastDownload = downloadBytes
+    trafficMonitor.lastUpload = uploadBytes
+  }
 
   property bool operationBusy: false
   property string operationStage: ''

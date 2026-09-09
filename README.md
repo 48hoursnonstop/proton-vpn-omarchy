@@ -15,6 +15,12 @@ Rust agent, protocol, Rust/eBPF service and reproducible Arch packaging live in
 Proton's official ProTun service remains an external dependency and is not
 redistributed by either repository.
 
+This checkout prepares frontend **0.9.6-rc4**, with brief native-style transitions
+and a shared five-minute traffic history that continues while the panel is closed.
+The verified backend remains
+pinned to **v0.9.6-rc1**, preserving its keyring compatibility. See the
+[RC4 notes and validation](docs/releases/0.9.6-rc4.md).
+
 ## Screenshots
 
 The same production Home view inherits each Omarchy theme without a separate
@@ -43,7 +49,8 @@ plugin skin:
 
 </details>
 
-All 19 screenshots are rendered at 2× in English from the production QML components
+All 19 screenshots are rendered offscreen at 420 × 640 logical pixels, 2× in
+English, using the same `ProtonWorkspace` as the native panel
 with deterministic documentation data. No user account, IP address, setting,
 recent connection or profile is read for publication captures.
 

@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
   implicitHeight: content.implicitHeight
@@ -103,8 +103,8 @@ Item {
       }
     }
 
-    PanelSectionHeader {
-      text: root.label('network').toUpperCase()
+    ProtonSectionHeader {
+      text: root.label('network')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
@@ -187,8 +187,8 @@ Item {
         wrapMode: Text.WordWrap
       }
 
-      Button {
-        text: ''
+      ProtonButton {
+        label: ''
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: false
@@ -196,8 +196,8 @@ Item {
         onClicked: root.vpnState.setConnectionFeedback('negative')
       }
 
-      Button {
-        text: ''
+      ProtonButton {
+        label: ''
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: false

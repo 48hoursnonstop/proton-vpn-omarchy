@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property bool editing: false
   property bool pickerVisible: false
@@ -480,16 +480,16 @@ Item {
       Text {
         Layout.fillWidth: true
         text: root.pickerVisible ? root.label('choose_location')
-          : root.editing ? root.label('edit_profile') : root.label('profiles')
+          : root.editing ? root.label(root.editingId ? 'edit_profile' : 'new_profile') : root.label('profiles')
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.heading
         font.weight: Font.DemiBold
       }
 
-      Button {
+      ProtonButton {
         visible: root.editing
-        text: root.label('cancel')
+        label: root.label('cancel')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: false
@@ -505,7 +505,7 @@ Item {
         iconName: 'plus'
         foreground: root.foreground
         fontFamily: root.fontFamily
-        tooltipText: root.label('profiles')
+        tooltipText: root.label('new_profile')
         onClicked: root.newProfile()
       }
     }
@@ -515,7 +515,7 @@ Item {
       width: parent.width
       spacing: Style.space(7)
 
-      TextField {
+      ProtonTextField {
         id: nameField
         width: parent.width
         placeholderText: root.label('profile_name')
@@ -542,20 +542,23 @@ Item {
         width: parent.width
         spacing: Style.space(2)
 
-        Row {
+        Flow {
           width: parent.width
           spacing: Style.space(4)
 
           Repeater {
             model: root.profileColors
 
-            delegate: Button {
+            delegate: ProtonButton {
               required property string modelData
               width: Math.max(Style.space(34),
                               (parent.width - Style.space(20)) / 6)
-              text: root.profileColor.toUpperCase() === modelData.toUpperCase()
+              label: root.profileColor.toUpperCase() === modelData.toUpperCase()
                 ? '●' : '○'
               foreground: modelData
+              Accessible.name: root.label('profile_icon') + ': ' + modelData
+              Accessible.checkable: true
+              Accessible.checked: root.profileColor.toUpperCase() === modelData.toUpperCase()
               fontFamily: root.fontFamily
               bordered: false
               onClicked: root.profileColor = modelData
@@ -719,10 +722,11 @@ Item {
         }
       }
 
-      TextField {
+      ProtonTextField {
         visible: root.networkPoliciesSupported && root.customDnsMode === 'custom'
         width: parent.width
         placeholderText: '1.1.1.1, 9.9.9.9'
+        fieldLabel: root.label('custom_dns')
         text: root.customDnsText
         foreground: root.foreground
         accent: Color.accent
@@ -863,10 +867,11 @@ Item {
           }
         }
 
-        TextField {
+        ProtonTextField {
           visible: root.connectAndGoMode === 'website'
           width: parent.width
           placeholderText: 'https://protonvpn.com'
+          fieldLabel: root.label('open_website')
           text: root.connectAndGoUrl
           foreground: root.foreground
           accent: Color.accent
@@ -904,7 +909,7 @@ Item {
           }
         }
 
-        ListView {
+        ProtonListView {
           id: connectAndGoAppsList
           visible: root.connectAndGoMode === 'application' &&
             root.connectAndGoAppPickerVisible
@@ -936,9 +941,9 @@ Item {
         }
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('save_profile')
+        label: root.label('save_profile')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: true
@@ -950,10 +955,10 @@ Item {
         onClicked: root.save()
       }
 
-      Button {
+      ProtonButton {
         visible: root.editingId.length > 0
         width: parent.width
-        text: root.vpnState && root.vpnState.defaultConnection.type === 'profile' &&
+        label: root.vpnState && root.vpnState.defaultConnection.type === 'profile' &&
           root.vpnState.defaultConnection.profileId === root.editingId
           ? root.label('default_profile_active') : root.label('make_default_profile')
         foreground: root.foreground
@@ -1005,7 +1010,7 @@ Item {
       }
     }
 
-    ListView {
+    ProtonListView {
       visible: !root.editing
       width: parent.width
       height: Math.min(contentHeight, Style.space(410))
@@ -1081,9 +1086,9 @@ Item {
         wrapMode: Text.WordWrap
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('delete')
+        label: root.label('delete')
         foreground: root.urgent
         fontFamily: root.fontFamily
         bordered: true
@@ -1095,11 +1100,11 @@ Item {
       }
     }
 
-    Button {
+    ProtonButton {
       visible: root.editing && !root.pickerVisible && root.editingId.length > 0 &&
         root.deleteCandidateId.length === 0
       width: parent.width
-      text: root.label('delete_profile')
+      label: root.label('delete_profile')
       foreground: root.urgent
       fontFamily: root.fontFamily
       bordered: false

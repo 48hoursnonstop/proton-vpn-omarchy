@@ -13,7 +13,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string selectedLocale: vpnState
     ? vpnState.locale : previewStrings.systemLocaleName
@@ -73,8 +73,8 @@ Item {
       width: parent.width
       spacing: Style.space(6)
 
-      PanelSectionHeader {
-        text: root.label('language').toUpperCase()
+      ProtonSectionHeader {
+        text: root.label('language')
         foreground: root.foreground
         fontFamily: root.fontFamily
       }
@@ -139,10 +139,10 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    Button {
+    ProtonButton {
       id: continueButton
       width: parent.width
-      text: root.label('continue')
+      label: root.label('continue')
       foreground: root.foreground
       fontFamily: root.fontFamily
       fontSize: Style.font.body

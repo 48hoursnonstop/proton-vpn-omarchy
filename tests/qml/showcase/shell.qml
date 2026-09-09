@@ -1,47 +1,26 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import 'components' as ProtonComponents
 
 ShellRoot {
   id: showcaseShell
-
   readonly property string route: Quickshell.env('PROTON_SHOWCASE_ROUTE') || 'home'
   readonly property string outputPath: Quickshell.env('PROTON_SHOWCASE_OUTPUT')
   property bool captureWarmed: false
-  readonly property bool rootRoute: route === 'home' || route === 'locations' ||
-    route === 'gateways' || route === 'profiles' || route === 'settings'
-  readonly property bool gatedRoute: route === 'onboarding' ||
-    route === 'authentication' || route === 'installer'
-  property var navigationDestinations: [
-    { route: 'home', icon: 'house', label: 'Home' },
-    { route: 'locations', icon: 'earth', label: 'Countries' },
-    { route: 'profiles', icon: 'window_terminal', label: 'Profiles' },
-    { route: 'settings', icon: 'cog_wheel', label: 'Settings' }
-  ]
-
-  function parentLabel() {
-    return route === 'recents' || route === 'details'
-      ? stringTable.text('home') : stringTable.text('settings')
-  }
-
   ShowcaseState {
     id: showcaseState
-    // Regression fixture: a standard server can report EntryCountry equal to
-    // ExitCountry. The production UI must still render one flag.
     secureCore: showcaseShell.route !== 'home-standard'
+    onboardingComplete: showcaseShell.route !== 'onboarding'
+    signedIn: showcaseShell.route !== 'authentication'
+    locale: Quickshell.env('PROTON_SHOWCASE_LOCALE') || 'en'
   }
-
-  ProtonStrings {
-    id: stringTable
-    localeName: 'en'
-  }
-
+  ProtonStrings { id: stringTable; localeName: showcaseState.locale }
   QtObject {
     id: showcaseInstaller
+    property bool shouldShow: showcaseShell.route === 'installer'
     property bool packageCurrent: false
     property bool packagePresent: false
     property bool running: false
@@ -54,315 +33,75 @@ ShellRoot {
     property bool canStart: true
     function start() {}
   }
-
-  // A real xdg-toplevel constrained to the plugin panel's publication size.
-  // grabToImage samples only its production surface, never the desktop.
+  FileView { id: palette; path: Quickshell.env('PROTON_SHOWCASE_THEME_PATH') + '/colors.toml' }
+  FileView { id: surface; path: Quickshell.env('PROTON_SHOWCASE_THEME_PATH') + '/shell.toml' }
+  // The script enforces offscreen rendering. No layer surface, agent or keyring.
   FloatingWindow {
     id: window
     title: 'Proton VPN Showcase - ' + route
     visible: true
-    implicitWidth: Style.space(380)
-    implicitHeight: Style.space(590)
-    minimumSize: Qt.size(Style.space(380), Style.space(590))
+    implicitWidth: Number(Quickshell.env('PROTON_SHOWCASE_WIDTH')) || 420
+    implicitHeight: Number(Quickshell.env('PROTON_SHOWCASE_HEIGHT')) || 640
+    minimumSize: Qt.size(implicitWidth, implicitHeight)
     maximumSize: minimumSize
     color: 'transparent'
-
     BorderSurface {
       id: captureRoot
       anchors.fill: parent
       color: Color.popups.background
-      borderSpec: Border.surfaceSpec(
-        'popups', 'border', Color.popups.border, Math.max(1, Style.space(2)))
+      borderSpec: Border.surfaceSpec('popups', 'border', Color.popups.border, Math.max(1, Style.space(2)))
       padding: Style.spacing.popupPadding
       radius: Style.cornerRadius
-
-      Item {
-        id: contentHolder
+      ProtonWorkspace {
+        id: workspace
         anchors.fill: parent
         anchors.topMargin: captureRoot.contentTopInset
         anchors.rightMargin: captureRoot.contentRightInset
         anchors.bottomMargin: captureRoot.contentBottomInset
         anchors.leftMargin: captureRoot.contentLeftInset
-
-        Flickable {
-          id: viewport
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.bottom: navigation.visible ? navigation.top : parent.bottom
-          contentWidth: width
-          contentHeight: pageColumn.implicitHeight
-          clip: true
-          boundsBehavior: Flickable.StopAtBounds
-          interactive: false
-
-          Column {
-            id: pageColumn
-            width: viewport.width
-            spacing: Style.space(8)
-
-            ProtonComponents.ProtonIconButton {
-              visible: !showcaseShell.rootRoute && !showcaseShell.gatedRoute
-              iconName: 'chevron_left'
-              label: showcaseShell.parentLabel()
-              foreground: Color.popups.text
-              fontFamily: Style.font.family
-            }
-
-            Loader {
-              id: pageLoader
-              width: parent.width
-              height: item ? item.implicitHeight : 0
-              sourceComponent: {
-                switch (route) {
-                case 'locations': return locationsComponent
-                case 'gateways': return gatewaysComponent
-                case 'profiles': return profilesComponent
-                case 'recents': return recentsComponent
-                case 'details': return detailsComponent
-                case 'default-connection': return defaultComponent
-                case 'settings': return settingsComponent
-                case 'split-tunneling': return splitComponent
-                case 'excluded-locations': return excludedComponent
-                case 'account': return accountComponent
-                case 'diagnostics': return diagnosticsComponent
-                case 'support': return supportComponent
-                case 'about': return aboutComponent
-                case 'onboarding': return onboardingComponent
-                case 'authentication': return authComponent
-                case 'installer': return installerComponent
-                default: return homeComponent
-                }
-              }
-            }
-          }
-        }
-
-        ProtonComponents.ProtonBottomNavigation {
-          id: navigation
-          z: 10
-          visible: showcaseShell.rootRoute
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          destinations: showcaseShell.navigationDestinations
-          currentRoute: showcaseShell.route
-          foreground: Color.popups.text
-          dim: Qt.darker(Color.popups.text, 1.55)
-          fontFamily: Style.font.family
-        }
+        vpnState: showcaseState
+        installerState: showcaseInstaller
+        strings: stringTable
+        Component.onCompleted: setRoute(showcaseShell.route)
       }
     }
   }
-
-  Component {
-    id: homeComponent
-    ProtonHomeView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
+  Timer {
+    interval: 300
+    running: true
+    onTriggered: {
+      Color.loadColors(palette.text())
+      Color.loadUserShell('')
+      Color.loadShell(surface.text())
+      Style.applyShellValues(Color.shellValues)
+      if (showcaseState.connected) showcaseState.seedTrafficHistory()
+      var fontSize = Number(Quickshell.env('PROTON_SHOWCASE_FONT_SIZE'))
+      if (fontSize > 0) Style.fontBaseSize = fontSize
+      var scenario = Quickshell.env('PROTON_SHOWCASE_SCENARIO')
+      if (scenario === 'empty' || scenario === 'loading' || scenario === 'error') {
+        showcaseState.connected = false
+        showcaseState.status = 'disconnected'
+        showcaseState.recents = []
+        if (scenario === 'loading') {
+          showcaseState.connecting = true
+          showcaseState.operationBusy = true
+          showcaseState.tunnelOperationBusy = true
+          showcaseState.operationStage = 'tunnel.connecting'
+        } else if (scenario === 'error') {
+          showcaseState.lastError = 'Synthetic connection failure'
+          showcaseState.lastErrorCode = 'connection_failed'
+          showcaseState.lastErrorRetryable = true
+        }
+      } else if (scenario === 'application') workspace.currentPage.settingsSection = 'application'
+      else if (scenario === 'advanced') workspace.currentPage.advancedExpanded = true
+      else if (scenario === 'edit-profile') {
+        workspace.currentPage.newProfile()
+        workspace.currentPage.iconPickerVisible = true
+      }
+      console.log('SHOWCASE_CONTRAST', ProtonComponents.ProtonUi.contrast(
+        workspace.dim, Color.popups.background))
     }
   }
-
-  Component {
-    id: locationsComponent
-    ProtonLocationsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-      section: 'countries'
-      sectionSwitcherVisible: false
-    }
-  }
-
-  Component {
-    id: gatewaysComponent
-    ProtonLocationsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-      section: 'gateways'
-      sectionSwitcherVisible: false
-    }
-  }
-
-  Component {
-    id: profilesComponent
-    ProtonProfilesView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: detailsComponent
-    ProtonConnectionDetailsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: recentsComponent
-    ProtonRecentsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: settingsComponent
-    ProtonSettingsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: defaultComponent
-    ProtonDefaultConnectionView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: splitComponent
-    ProtonSplitTunnelingView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: excludedComponent
-    ProtonExcludedLocationsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: accountComponent
-    ProtonAccountView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: diagnosticsComponent
-    ProtonDiagnosticsView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: supportComponent
-    ProtonSupportView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: aboutComponent
-    ProtonAboutView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: onboardingComponent
-    ProtonOnboardingView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: authComponent
-    ProtonAuthView {
-      vpnState: showcaseState
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
-  Component {
-    id: installerComponent
-    ProtonInstallerView {
-      installerState: showcaseInstaller
-      strings: stringTable
-      foreground: Color.popups.text
-      urgent: Color.urgent
-      dim: Qt.darker(Color.popups.text, 1.55)
-      fontFamily: Style.font.family
-    }
-  }
-
   Timer {
     id: captureTimer
     interval: route === 'home' || route === 'details' ? 3400 : 1800

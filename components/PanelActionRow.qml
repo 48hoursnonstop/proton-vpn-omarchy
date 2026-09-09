@@ -25,15 +25,16 @@ CursorSurface {
   property real iconWidth: iconSize
   property string title: ''
   property string subtitle: ''
-  property bool subtitleWrap: false
+  property bool subtitleWrap: true
   property string detail: ''
   property string detailIconName: ''
+  property real detailIconRotation: 0
   property bool toggleVisible: false
   property bool checked: false
   property bool busy: false
   property bool hasKeyboardCursor: false
   property color rowForeground: Color.foreground
-  property color dimForeground: Qt.darker(rowForeground, 1.55)
+  property color dimForeground: ProtonUi.secondaryText(rowForeground)
   property color iconForeground: checked ? Color.accent : dimForeground
   property string rowFontFamily: Style.font.family
   readonly property bool hasProfileIcon: profileIconName !== ''
@@ -50,12 +51,45 @@ CursorSurface {
 
   signal activated()
   signal hovered()
+  property bool spaceHeld: false
+  readonly property bool pressed: enabled && !busy && (spaceHeld || (rowMouse.pressed && rowMouse.containsMouse))
 
-  hasCursor: hasKeyboardCursor && enabled
+  activeFocusOnTab: enabled && !busy
+  hasCursor: enabled && (hasKeyboardCursor || activeFocus || rowMouse.containsMouse)
+  Accessible.role: toggleVisible ? Accessible.CheckBox : Accessible.Button
+  Accessible.name: title
+  Accessible.description: subtitle + (detail ? '. ' + detail : '')
+  Accessible.checkable: toggleVisible
+  Accessible.checked: checked
+  Accessible.focusable: enabled && !busy
+  Accessible.onPressAction: trigger()
+  Accessible.onToggleAction: trigger()
+  function trigger() { if (enabled && !busy) activated() }
+  Keys.onPressed: function(event) {
+    if (event.key === Qt.Key_Space) {
+      if (!event.isAutoRepeat && enabled && !busy) spaceHeld = true
+      event.accepted = true
+    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+      if (!event.isAutoRepeat) trigger()
+      event.accepted = true
+    }
+  }
+  Keys.onReleased: function(event) {
+    if (event.key !== Qt.Key_Space) return
+    event.accepted = true
+    if (event.isAutoRepeat) return
+    var activate = spaceHeld && activeFocus
+    spaceHeld = false
+    if (activate) trigger()
+  }
+  onActiveFocusChanged: if (!activeFocus) spaceHeld = false
+  onEnabledChanged: if (!enabled) spaceHeld = false
+  onBusyChanged: if (busy) spaceHeld = false
   foreground: rowForeground
-  fill: Style.hoverFillFor(rowForeground, Color.accent)
+  fill: pressed ? Style.pressedFillFor(rowForeground, Color.accent)
+    : Style.hoverFillFor(rowForeground, Color.accent)
   currentFill: Style.selectedFillFor(rowForeground, Color.accent)
-  implicitHeight: rowContent.implicitHeight + Style.spacing.rowPaddingX
+  implicitHeight: Math.max(ProtonUi.controlHeight, rowContent.implicitHeight + Style.space(16))
   opacity: enabled ? 1.0 : 0.45
 
   Behavior on opacity {
@@ -136,7 +170,8 @@ CursorSurface {
         color: root.rowForeground
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.body
-        elide: Text.ElideRight
+        wrapMode: Text.Wrap
+        lineHeight: 1.15
       }
 
       Text {
@@ -148,6 +183,7 @@ CursorSurface {
         font.family: root.rowFontFamily
         font.pixelSize: Style.font.caption
         wrapMode: root.subtitleWrap ? Text.WordWrap : Text.NoWrap
+        lineHeight: 1.4
         elide: root.subtitleWrap ? Text.ElideNone : Text.ElideRight
       }
     }
@@ -169,6 +205,9 @@ CursorSurface {
 
       ProtonComponents.ProtonMobileIcon {
         iconName: root.detailIconName
+        objectName: 'row-detail-icon'
+        rotation: root.detailIconRotation
+        Behavior on rotation { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
         iconColor: root.checked ? Color.accent : root.dimForeground
         iconSize: Style.font.iconSmall
       }
@@ -179,6 +218,8 @@ CursorSurface {
       visible: root.toggleVisible
       Layout.alignment: Qt.AlignVCenter
       checked: root.checked
+      interactive: false
+      Accessible.ignored: true
       busy: root.busy || !root.enabled
       foreground: root.rowForeground
       onHovered: function(on) { if (on) root.hovered() }
@@ -187,16 +228,16 @@ CursorSurface {
   }
 
   MouseArea {
+    id: rowMouse
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.right: parent.right
-    anchors.rightMargin: root.toggleVisible
-      ? rowSwitch.width + Style.space(10) : 0
     enabled: root.enabled && !root.busy
     hoverEnabled: true
     cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
     onEntered: root.hovered()
-    onClicked: root.activated()
+    onPressed: root.forceActiveFocus(Qt.MouseFocusReason)
+    onClicked: root.trigger()
   }
 }

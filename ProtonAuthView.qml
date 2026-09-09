@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property bool securityKeyMode: false
 
@@ -140,9 +140,9 @@ Item {
         wrapMode: Text.WordWrap
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('disable_advanced_kill_switch')
+        label: root.label('disable_advanced_kill_switch')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.bodySmall
@@ -162,7 +162,7 @@ Item {
       width: parent.width
       spacing: Style.space(8)
 
-      TextField {
+      ProtonTextField {
         id: usernameField
         width: parent.width
         placeholderText: root.label('username')
@@ -176,7 +176,7 @@ Item {
         onAccepted: passwordField.forceActiveFocus()
       }
 
-      TextField {
+      ProtonTextField {
         id: passwordField
         width: parent.width
         password: true
@@ -191,9 +191,9 @@ Item {
         onAccepted: root.submitLogin()
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('sign_in')
+        label: root.label('sign_in')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.body
@@ -206,11 +206,11 @@ Item {
         onClicked: root.submitLogin()
       }
 
-      Button {
+      ProtonButton {
         visible: root.vpnState &&
           root.vpnState.supportsMethod('account.login_guest')
         width: parent.width
-        text: root.label('continue_as_guest')
+        label: root.label('continue_as_guest')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.body
@@ -239,7 +239,7 @@ Item {
       width: parent.width
       spacing: Style.space(8)
 
-      TextField {
+      ProtonTextField {
         id: codeField
         width: parent.width
         placeholderText: root.label('two_factor_code')
@@ -257,9 +257,9 @@ Item {
         onAccepted: root.submitCode()
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('authenticate')
+        label: root.label('authenticate')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.body
@@ -271,10 +271,10 @@ Item {
         onClicked: root.submitCode()
       }
 
-      Button {
+      ProtonButton {
         visible: root.vpnState && root.vpnState.twoFactorSecurityKeySupported
         width: parent.width
-        text: root.label('use_security_key')
+        label: root.label('use_security_key')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.bodySmall
@@ -289,7 +289,7 @@ Item {
       width: parent.width
       spacing: Style.space(8)
 
-      TextField {
+      ProtonTextField {
         id: pinField
         visible: root.vpnState && root.vpnState.securityKeyPinRequired
         width: parent.width
@@ -306,10 +306,10 @@ Item {
         onVisibleChanged: if (visible) Qt.callLater(forceActiveFocus)
       }
 
-      Button {
+      ProtonButton {
         visible: root.vpnState && root.vpnState.securityKeyPinRequired
         width: parent.width
-        text: root.label('submit_pin')
+        label: root.label('submit_pin')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.body
@@ -322,10 +322,10 @@ Item {
         onClicked: root.submitPin()
       }
 
-      Button {
+      ProtonButton {
         visible: !root.securityKeyActive
         width: parent.width
-        text: root.label('authenticate')
+        label: root.label('authenticate')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.body
@@ -337,11 +337,11 @@ Item {
         onClicked: root.vpnState.authenticateWithSecurityKey()
       }
 
-      Button {
+      ProtonButton {
         visible: root.securityKeyActive && root.vpnState &&
           root.vpnState.operationCancelable
         width: parent.width
-        text: root.label('cancel')
+        label: root.label('cancel')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.bodySmall
@@ -350,11 +350,11 @@ Item {
         onClicked: root.vpnState.cancelSecurityKey()
       }
 
-      Button {
+      ProtonButton {
         visible: root.vpnState && root.vpnState.twoFactorCodeSupported &&
           !root.securityKeyActive
         width: parent.width
-        text: root.label('use_authenticator')
+        label: root.label('use_authenticator')
         foreground: root.foreground
         fontFamily: root.fontFamily
         fontSize: Style.font.bodySmall

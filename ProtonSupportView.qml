@@ -11,7 +11,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property int categoryIndex: -1
   property var fieldValues: ({})
@@ -85,8 +85,8 @@ Item {
       font.weight: Font.DemiBold
     }
 
-    PanelSectionHeader {
-      text: root.label('community_support').toUpperCase()
+    ProtonSectionHeader {
+      text: root.label('community_support')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
@@ -151,7 +151,7 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    ListView {
+    ProtonListView {
       visible: root.vpnState && root.vpnState.reportIssueSupported && root.category === null
       width: parent.width
       height: Math.min(contentHeight, Style.space(360))
@@ -219,7 +219,7 @@ Item {
         }
       }
 
-      TextField {
+      ProtonTextField {
         id: emailField
         width: parent.width
         placeholderText: root.label('email')
@@ -238,18 +238,9 @@ Item {
           width: root.width
           spacing: Style.space(3)
 
-          Text {
+          ProtonTextField {
             width: parent.width
-            text: String(modelData.label || '') + (modelData.is_mandatory ? ' *' : '')
-            textFormat: Text.PlainText
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
-
-          TextField {
-            width: parent.width
+            fieldLabel: String(modelData.label || modelData.placeholder || '') + (modelData.is_mandatory ? ' *' : '')
             placeholderText: String(modelData.placeholder || '')
             foreground: root.foreground
             accent: Color.accent
@@ -274,10 +265,10 @@ Item {
         }
       }
 
-      Button {
+      ProtonButton {
         visible: !root.confirmingOfficialReport
         width: parent.width
-        text: root.label('review_official_report')
+        label: root.label('review_official_report')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: true
@@ -306,18 +297,18 @@ Item {
           width: parent.width
           spacing: Style.space(4)
 
-          Button {
+          ProtonButton {
             width: (parent.width - parent.spacing) / 2
-            text: root.label('cancel')
+            label: root.label('cancel')
             foreground: root.foreground
             fontFamily: root.fontFamily
             bordered: true
             onClicked: root.confirmingOfficialReport = false
           }
 
-          Button {
+          ProtonButton {
             width: (parent.width - parent.spacing) / 2
-            text: root.label('send_to_proton')
+            label: root.label('send_to_proton')
             foreground: root.foreground
             fontFamily: root.fontFamily
             bordered: true

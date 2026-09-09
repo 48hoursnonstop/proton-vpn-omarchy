@@ -9,6 +9,10 @@ ShellRoot {
   QtObject {
     id: mockAgent
     property bool connected: true
+    property bool agentAvailable: true
+    property string serverName: 'CH#42'
+    property string protocol: 'wireguard'
+    readonly property QtObject trafficMonitor: ProtonTrafficHistory { vpnState: mockAgent }
     property bool trafficKnown: true
     property double downloadBytes: 73400320
     property double uploadBytes: 12582912

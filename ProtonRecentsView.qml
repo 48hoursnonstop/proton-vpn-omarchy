@@ -12,11 +12,13 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property var selectedRecent: null
   property string deleteCandidateId: ''
   property string deleteRequestId: ''
+  property bool compact: false
+  signal navigateRequested(string route)
 
   implicitHeight: content.implicitHeight
 
@@ -98,9 +100,20 @@ Item {
         font.family: root.fontFamily
         font.pixelSize: Style.font.heading
         font.weight: Font.DemiBold
+        wrapMode: Text.Wrap
+      }
+
+      ProtonButton {
+        visible: root.compact
+        label: root.label('view_all')
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        fontSize: Style.font.bodySmall
+        onClicked: root.navigateRequested('recents')
       }
 
       Text {
+        visible: !root.compact
         text: root.vpnState ? String(root.vpnState.recents.length) : '0'
         color: root.dim
         font.family: root.fontFamily
@@ -109,6 +122,7 @@ Item {
     }
 
     Text {
+      visible: !root.compact
       width: parent.width
       text: root.label('favorites_description')
       color: root.dim
@@ -117,14 +131,15 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    ListView {
+    ProtonListView {
       id: recentsList
       width: parent.width
-      height: Math.min(contentHeight, Style.space(410))
+      height: root.compact ? contentHeight : Math.min(contentHeight, Style.space(410))
       implicitHeight: height
       clip: true
       boundsBehavior: Flickable.StopAtBounds
-      model: root.vpnState ? root.vpnState.recents : []
+      interactive: !root.compact
+      model: root.vpnState ? (root.compact ? root.vpnState.recents.slice(0, 3) : root.vpnState.recents) : []
       spacing: Style.space(2)
 
       delegate: Item {
@@ -163,7 +178,9 @@ Item {
           iconName: modelData.pinned ? 'star_filled' : 'star'
           foreground: root.foreground
           fontFamily: root.fontFamily
-          tooltipText: root.label('favorites_description')
+          tooltipText: root.label(modelData.pinned ? 'unpin_recent' : 'pin_recent')
+          Accessible.checkable: true
+          Accessible.checked: modelData.pinned
           enabled: root.vpnState && !root.vpnState.storeOperationBusy
           onClicked: root.vpnState.setRecentPinned(
             String(modelData.id || ''), !modelData.pinned
@@ -177,7 +194,7 @@ Item {
           iconName: 'three_dots_horizontal'
           foreground: root.foreground
           fontFamily: root.fontFamily
-          tooltipText: root.label('recents_and_favorites')
+          tooltipText: root.label('recent_actions')
           onClicked: {
             root.selectedRecent = modelData
             root.deleteCandidateId = ''
@@ -195,6 +212,16 @@ Item {
       font.pixelSize: Style.font.bodySmall
       horizontalAlignment: Text.AlignHCenter
       wrapMode: Text.WordWrap
+    }
+
+    ProtonButton {
+      visible: root.compact && root.vpnState && root.vpnState.recents.length === 0
+      width: parent.width
+      label: root.label('browse_locations')
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      bordered: true
+      onClicked: root.navigateRequested('locations')
     }
 
     Column {
@@ -216,9 +243,9 @@ Item {
         elide: Text.ElideRight
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.isDefault(root.selectedRecent)
+        label: root.isDefault(root.selectedRecent)
           ? root.label('default_connection_active') : root.label('use_as_default')
         foreground: root.foreground
         fontFamily: root.fontFamily
@@ -230,9 +257,9 @@ Item {
         })
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.deleteCandidateId.length > 0
+        label: root.deleteCandidateId.length > 0
           ? root.label('confirm_delete_recent') : root.label('delete_recent')
         foreground: root.urgent
         fontFamily: root.fontFamily
@@ -248,9 +275,9 @@ Item {
         }
       }
 
-      Button {
+      ProtonButton {
         width: parent.width
-        text: root.label('cancel')
+        label: root.label('cancel')
         foreground: root.foreground
         fontFamily: root.fontFamily
         bordered: false

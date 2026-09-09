@@ -129,6 +129,7 @@ QtObject {
   property double uploadBytes: 0
   property double downloadBytesPerSecond: 0
   property double uploadBytesPerSecond: 0
+  readonly property QtObject trafficMonitor: ProtonTrafficHistory { vpnState: root }
 
   function normalizedDefaultConnection(selection) {
     var kind = String(selection && selection.type || '')
@@ -222,7 +223,7 @@ QtObject {
   property int nextRequestId: 1
   readonly property string clientInstanceId: 'plugin-' + Date.now() + '-' +
     Math.floor(Math.random() * 0x100000000).toString(16)
-  readonly property string clientVersion: '0.9.5'
+  readonly property string clientVersion: '0.9.6-rc4'
   property string serverClientInstanceId: ''
   property var pendingRequests: ({})
   property var pendingConnectionRecents: ({})

@@ -12,7 +12,7 @@ Item {
   property QtObject strings: null
   property color foreground: Color.foreground
   property color urgent: Color.urgent
-  property color dim: Qt.darker(foreground, 1.55)
+  property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string mode: vpnState && vpnState.splitTunnelingMode === 'inverse'
     ? 'inverse' : 'standard'
@@ -148,7 +148,7 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    TextField {
+    ProtonTextField {
       id: searchField
       width: parent.width
       placeholderText: root.label('search_apps')
@@ -165,7 +165,7 @@ Item {
       onTriggered: root.vpnState.loadApps(searchField.text)
     }
 
-    ListView {
+    ProtonListView {
       id: installedAppsList
       width: parent.width
       height: Math.min(contentHeight, Style.space(310))
@@ -197,7 +197,7 @@ Item {
       width: parent.width
       spacing: Style.space(6)
 
-      TextField {
+      ProtonTextField {
         id: manualAppField
         Layout.fillWidth: true
         placeholderText: root.label('manual_executable')
@@ -235,9 +235,9 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    PanelSectionHeader {
+    ProtonSectionHeader {
       visible: root.ipRangesSupported
-      text: root.label('ip_ranges').toUpperCase()
+      text: root.label('ip_ranges')
       foreground: root.foreground
       fontFamily: root.fontFamily
     }
@@ -264,10 +264,11 @@ Item {
       width: parent.width
       spacing: Style.space(6)
 
-      TextField {
+      ProtonTextField {
         id: ipRangeField
         Layout.fillWidth: true
         placeholderText: root.label('ip_range_placeholder')
+        fieldLabel: root.label('ip_ranges')
         foreground: root.foreground
         accent: Color.accent
         font.family: root.fontFamily
@@ -301,9 +302,9 @@ Item {
       wrapMode: Text.WordWrap
     }
 
-    Button {
+    ProtonButton {
       width: parent.width
-      text: root.label('apply')
+      label: root.label('apply')
       foreground: root.foreground
       fontFamily: root.fontFamily
       bordered: true
