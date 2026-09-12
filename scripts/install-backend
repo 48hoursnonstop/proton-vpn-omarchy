@@ -3,19 +3,19 @@ set -euo pipefail
 export PATH='/usr/bin'
 
 readonly PACKAGE_NAME='proton-vpn-omarchy'
-readonly TARGET_VERSION='0.9.7-1'
+readonly TARGET_VERSION='0.9.7-2'
 readonly PACKAGE_FILE="${PACKAGE_NAME}-${TARGET_VERSION}-x86_64.pkg.tar.zst"
-readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7-rc1'
+readonly RELEASE_BASE='https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7'
 readonly RELEASE_FINGERPRINT='60F7F9724C0A7AD1337F598EB50BA28309B120BA'
-readonly SOURCE_REF='refs/tags/v0.9.7-rc1'
-readonly SOURCE_COMMIT='375d6bf5346a16f4e1a0018190ceb4d7fe252fbe'
-readonly PACKAGE_BYTES=4394802
-readonly PACKAGE_SHA256='e35648a3c5bc95431b870c0e0d06cc67727f0c7e23c5e9c56b75759c82b557d7'
+readonly SOURCE_REF='refs/tags/v0.9.7'
+readonly SOURCE_COMMIT='7f1d2bf51359a799ed1c1fcfc609291cdcd4aad4'
+readonly PACKAGE_BYTES=4394772
+readonly PACKAGE_SHA256='091f7cb3e1831dbea4c5a4b79e50192754a9a30bea781c555f925599bd4f3749'
 readonly SIGNATURE_BYTES=119
-readonly SIGNATURE_SHA256='7df5c543758b4e98d3ccfae28039d5b91452d8c66f3b3c093637094641f09b2c'
+readonly SIGNATURE_SHA256='858e4de483c366e2041dc482551673d227e88bed617e87db895676acc0322588'
 readonly ATTESTATION_FILE="${PACKAGE_FILE}.intoto.jsonl"
-readonly ATTESTATION_BYTES=11692
-readonly ATTESTATION_SHA256='86f08036610d61a07556b337feb19af9a4d32118da617895cb04bd608069733f'
+readonly ATTESTATION_BYTES=11396
+readonly ATTESTATION_SHA256='89e4269d6443c9f4c55f0fed3fa9548742806a4cba58c313b6ce071416fa96e4'
 readonly SIGNER_WORKFLOW='48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml'
 
 mode="${1:---install}"
