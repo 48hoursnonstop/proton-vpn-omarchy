@@ -18,6 +18,8 @@ Item {
 
   readonly property bool twoFactor: vpnState &&
     vpnState.accountStatus === 'two_factor_required'
+  readonly property bool restoring: vpnState &&
+    (vpnState.accountStatus === 'restoring' || vpnState.accountStatus === 'unknown')
   readonly property bool securityKeyActive: vpnState &&
     vpnState.operationKind === 'account.authenticate_fido2' &&
     vpnState.operationBusy
@@ -27,7 +29,7 @@ Item {
   readonly property bool cancelRequestBusy: vpnState &&
     vpnState.requestPending('account.cancel_fido2')
   readonly property bool authAvailable: vpnState && vpnState.agentAvailable &&
-    vpnState.backendReady
+    vpnState.backendReady && !restoring
 
   implicitHeight: content.implicitHeight
 
@@ -36,7 +38,8 @@ Item {
   }
 
   function focusInitial() {
-    if (!twoFactor) usernameField.forceActiveFocus()
+    if (restoring) restoreButton.forceActiveFocus()
+    else if (!twoFactor) usernameField.forceActiveFocus()
     else if (securityKeyMode && vpnState && vpnState.securityKeyPinRequired)
       pinField.forceActiveFocus()
     else if (!securityKeyMode) codeField.forceActiveFocus()
@@ -96,6 +99,8 @@ Item {
     Qt.callLater(focusInitial)
   }
 
+  onRestoringChanged: Qt.callLater(focusInitial)
+
   Column {
     id: content
     width: parent.width
@@ -103,12 +108,12 @@ Item {
 
     ProtonPanelHero {
       width: parent.width
-      title: root.twoFactor
+      title: root.restoring ? root.label('keyring_waiting_title') : root.twoFactor
         ? (root.securityKeyMode
             ? root.label('security_key_title')
             : root.label('two_factor_title'))
         : root.label('sign_in_title')
-      meta: root.twoFactor
+      meta: root.restoring ? root.label('keyring_waiting_description') : root.twoFactor
         ? (root.securityKeyMode
             ? root.label('security_key_description')
             : root.label('two_factor_description'))
@@ -123,6 +128,22 @@ Item {
           state: root.authBusy ? 'connecting' : 'information'
         }
       }
+    }
+
+    ProtonButton {
+      id: restoreButton
+      objectName: 'keyring-retry'
+      visible: root.restoring
+      width: parent.width
+      label: root.label('keyring_retry')
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      bordered: true
+      active: true
+      property bool retryBusy: root.vpnState && root.vpnState.requestPending('account.retry_restore')
+      enabled: root.vpnState && root.vpnState.agentAvailable &&
+        root.vpnState.supportsMethod('account.retry_restore') && !retryBusy
+      onClicked: root.vpnState.send('account.retry_restore', {})
     }
 
     Column {
@@ -158,7 +179,7 @@ Item {
     }
 
     Column {
-      visible: !root.twoFactor
+      visible: !root.twoFactor && !root.restoring
       width: parent.width
       spacing: Style.space(8)
 

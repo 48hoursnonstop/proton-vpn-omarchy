@@ -12,7 +12,7 @@ cp -a "$root/components" "$root/assets" "$root/i18n" "$work/"
 cp "$root/tests/qml/showcase/ShowcaseState.qml" "$work/"
 ln -s "$shell_root/Commons" "$work/Commons"
 ln -s "$shell_root/Ui" "$work/Ui"
-for fixture in ${PROTON_UI_FIXTURES:-locale location-search pagination profile-destination workspace interaction control-states traffic-history motion}; do
+for fixture in ${PROTON_UI_FIXTURES:-locale location-search pagination profile-destination workspace keyring-recovery interaction control-states traffic-history motion}; do
   cp "$root/tests/qml/$fixture-shell.qml" "$work/shell.qml"
   if ! output="$(env QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR="$work/runtime" \
     XDG_CONFIG_HOME="$work/config" timeout -k 3s 15s quickshell --no-color -p "$work" 2>&1)"; then

@@ -100,7 +100,9 @@ ShellRoot {
         labelled('Application').forceActiveFocus()
         press(Qt.Key_Space)
         check(workspace.currentPage.settingsSection === 'application', 'keyboard opens Application settings')
-        labelled('Sign out').forceActiveFocus()
+        // Let the section's visibility/bindings settle before finding its
+        // controls; reading Accessible.name in the same key event can be stale.
+        Qt.callLater(function() { labelled('Sign out').forceActiveFocus() })
         break
       case 5:
         check(named('page-viewport').contentY > 0, 'keyboard reveals offscreen control')
