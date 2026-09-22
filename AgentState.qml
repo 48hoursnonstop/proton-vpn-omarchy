@@ -116,6 +116,8 @@ QtObject {
   property string countryCode: ''
   property string entryCountryCode: ''
   property string countryName: ''
+  property string hostCountryCode: ''
+  property string hostCountryName: ''
   property string city: ''
   property string serverName: ''
   property string serverIp: ''
@@ -204,6 +206,19 @@ QtObject {
   property bool connectionFeedbackAvailable: false
   property bool connectionFeedbackViewed: false
   property bool connectionFeedbackSent: false
+  property bool connectionFeedbackVisible: false
+  property bool connectionFeedbackAutoDismissSupported: false
+  property int connectionFeedbackAutoDismissSeconds: 10
+  property string connectionFeedbackSessionId: ''
+  readonly property ProtonFeedbackTimer connectionFeedbackTimer: ProtonFeedbackTimer {
+    exposed: root.connectionFeedbackVisible && root.connected &&
+      !root.requestPending('connection.feedback')
+    available: root.connectionFeedbackAutoDismissSupported &&
+      root.connectionFeedbackAvailable && !root.connectionFeedbackSent
+    sessionId: root.connectionFeedbackSessionId
+    timeoutSeconds: root.connectionFeedbackAutoDismissSeconds
+    onDismissed: root.setConnectionFeedback('dismissed')
+  }
   property bool customDns: false
   property var customDnsServers: []
   property bool featuresKnown: false
@@ -1518,6 +1533,10 @@ QtObject {
     countryCode = connection.country_code || ''
     entryCountryCode = connection.entry_country_code || ''
     countryName = connection.country_name || ''
+    hostCountryCode = connection.host_country_code || ''
+    hostCountryName = connection.host_country_name || ''
+    connectionFeedbackSessionId = connection.connected_at_unix_ms
+      ? String(connection.connected_at_unix_ms) : ''
     city = connection.city || ''
     serverName = connection.server_name || ''
     serverIp = connection.server_ip || ''
@@ -1594,6 +1613,11 @@ QtObject {
       features.anonymous_crash_reports.enabled)
     anonymousUsageStatistics = !!(features.anonymous_usage_statistics &&
       features.anonymous_usage_statistics.enabled)
+    var feedbackSeconds = Number(features.connection_feedback &&
+      features.connection_feedback.auto_dismiss_seconds)
+    connectionFeedbackAutoDismissSupported = feedbackSeconds >= 1 && feedbackSeconds <= 300
+    connectionFeedbackAutoDismissSeconds = feedbackSeconds >= 1 && feedbackSeconds <= 300
+      ? Math.floor(feedbackSeconds) : 10
     connectionFeedbackAvailable = !!(features.connection_feedback &&
       features.connection_feedback.available)
     connectionFeedbackViewed = !!(features.connection_feedback &&

@@ -121,7 +121,8 @@ Item {
           Text {
             Layout.fillWidth: true
             text: root.vpnState && root.vpnState.connected
-              ? root.vpnState.serverName + ' · ' + root.strings.protocolName(root.vpnState.protocol)
+              ? root.vpnState.serverName + ' · ' + root.strings.protocolName(root.vpnState.protocol) +
+                (root.vpnState.hostCountryCode ? ' · Smart Routing' : '')
               : root.label('connect_default_hint')
             textFormat: Text.PlainText
             color: root.dim

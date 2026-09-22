@@ -200,6 +200,35 @@ Item {
     return !server.secure_core && !server.restricted && !server.partner
   }
 
+  function physicalLocation(code, name) {
+    return code ? label('physical_location') + ': ' +
+      countryDisplayName({ code: code, name: name || code }) : ''
+  }
+
+  function serverSubtitle(server) {
+    var location = server.secure_core
+      ? countryDisplayName({ code: server.entry_country_code, name: server.entry_country_name }) + ' → ' +
+        countryDisplayName({ code: server.country_code, name: server.country_name })
+      : String(server.city || '')
+    var parts = location ? [location] : []
+    parts.push(String(server.load || 0) + '%')
+    if (server.host_country_code)
+      parts.push('Smart Routing · ' + physicalLocation(server.host_country_code, server.host_country_name))
+    return parts.join(' · ')
+  }
+
+  function countrySubtitle(country) {
+    var text = String(country.available_server_count || 0) + ' / ' +
+      String(country.server_count || 0) + ' ' + label('servers').toLowerCase()
+    var hosts = country.smart_routing_countries || []
+    if (hosts.length) {
+      var names = []
+      for (var i = 0; i < hosts.length; ++i) names.push(countryDisplayName(hosts[i]))
+      text += ' · Smart Routing · ' + label('physical_location') + ': ' + names.join(', ')
+    }
+    return text
+  }
+
   function buildSearchResults() {
     if (!searching) return []
     var countries = []
@@ -233,8 +262,7 @@ Item {
         if (countryRank >= 0) countries.push({
           resultType: 'country', rank: countryRank, country: country,
           title: displayName,
-          subtitle: String(country.available_server_count || 0) + ' / ' +
-            String(country.server_count || 0) + ' ' + label('servers').toLowerCase()
+          subtitle: countrySubtitle(country)
         })
 
         if (feature !== 'standard' && feature !== 'p2p') continue
@@ -280,12 +308,7 @@ Item {
       servers.push({
         resultType: 'server', rank: Search.matchRank(searchQuery, [server.name]),
         server: server, title: String(server.name || ''),
-        subtitle: server.secure_core
-          ? countryDisplayName({ code: server.entry_country_code,
-              name: server.entry_country_name }) + ' → ' +
-            countryDisplayName({ code: server.country_code, name: server.country_name })
-          : (server.city ? String(server.city) + ' · ' : '') +
-            String(server.load || 0) + '%'
+        subtitle: serverSubtitle(server)
       })
     }
 
@@ -922,8 +945,7 @@ Item {
         title: root.section === 'countries'
           ? root.countryDisplayName(modelData)
           : String(modelData.name || '')
-        subtitle: String(modelData.available_server_count || 0) + ' / ' +
-          String(modelData.server_count || 0) + ' ' + root.label('servers').toLowerCase()
+        subtitle: root.countrySubtitle(modelData)
         detailIconName: 'chevron_right'
         onActivated: root.openLocation(
           modelData,
@@ -1059,10 +1081,7 @@ Item {
         entryFlagCode: modelData.secure_core
           ? String(modelData.entry_country_code || '') : ''
         title: String(modelData.name || '')
-        subtitle: (modelData.secure_core
-          ? String(modelData.entry_country_name || modelData.entry_country_code || '') + ' → '
-          : modelData.city ? String(modelData.city) + ' · ' : '') +
-          String(modelData.load || 0) + '%'
+        subtitle: root.serverSubtitle(modelData)
         detailIconName: modelData.maintenance || !modelData.enabled
           ? 'minus_circle_filled'
           : root.currentServerMatches(modelData) ? 'checkmark' : 'play'

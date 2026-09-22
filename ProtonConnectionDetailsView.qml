@@ -36,6 +36,14 @@ Item {
     function onConnectedChanged() { Qt.callLater(root.markFeedbackViewed) }
   }
 
+  Binding {
+    target: root.vpnState
+    property: 'connectionFeedbackVisible'
+    value: root.visible && feedbackRow.opacity > 0 && feedbackRow.wanted
+    when: root.vpnState !== null
+    restoreMode: Binding.RestoreBindingOrValue
+  }
+
   Timer {
     interval: 20000
     repeat: true
@@ -131,6 +139,18 @@ Item {
     }
 
     PanelActionRow {
+      objectName: 'smart-routing-details'
+      visible: root.vpnState && root.vpnState.connected && root.vpnState.hostCountryCode !== ''
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      iconName: 'globe'
+      title: 'Smart Routing'
+      subtitle: root.label('physical_location') + ': ' + (root.vpnState
+        ? root.strings.countryName(root.vpnState.hostCountryCode, root.vpnState.hostCountryName) : '')
+    }
+
+    PanelActionRow {
       visible: root.vpnState && !root.vpnState.connected && root.vpnState.deviceLocationKnown
       width: parent.width
       rowForeground: root.foreground
@@ -172,9 +192,15 @@ Item {
     }
 
     RowLayout {
-      visible: root.vpnState && root.vpnState.connected &&
-        root.vpnState.connectionFeedbackAvailable &&
-        !root.vpnState.connectionFeedbackSent
+      id: feedbackRow
+      objectName: 'connection-feedback'
+      readonly property bool wanted: !!(root.vpnState && root.vpnState.connected &&
+        root.vpnState.connectionFeedbackAvailable && !root.vpnState.connectionFeedbackSent &&
+        !root.vpnState.connectionFeedbackTimer.expired)
+      visible: opacity > 0
+      opacity: wanted ? 1 : 0
+      enabled: wanted
+      Behavior on opacity { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutQuad } }
       width: parent.width
       spacing: Style.space(6)
 
