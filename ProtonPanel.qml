@@ -41,7 +41,10 @@ Panel {
         vpnState.countries.length === 0 && vpnState.gateways.length === 0) vpnState.loadLocations()
   }
   onOpenedChanged: {
-    if (bar && 'centerHoverRevealSuppressed' in bar) bar.centerHoverRevealSuppressed = opened
+    if (bar && typeof bar.setCenterHoverRevealSuppressed === 'function')
+      bar.setCenterHoverRevealSuppressed(opened)
+    else if (bar && 'centerHoverRevealSuppressed' in bar)
+      bar.centerHoverRevealSuppressed = opened
     if (!opened) {
       if (installerState) installerState.releaseDemand()
       if (vpnState) vpnState.demandAgent(false)
