@@ -137,15 +137,17 @@ Item {
         id: connectButton
         objectName: 'connection-action'
         width: parent.width
-        label: root.vpnState && root.vpnState.tunnelOperationBusy
+        label: root.vpnState && root.vpnState.connecting && root.vpnState.operationCancelable
+          ? root.label('cancel') : root.vpnState && root.vpnState.tunnelOperationBusy
           ? root.strings.operationStage(root.vpnState.operationStage) : root.vpnState && root.vpnState.connected
           ? root.label('disconnect_proton_vpn') : root.label('quick_connect')
         foreground: root.foreground
         fontFamily: root.fontFamily
         primary: true
         hasCursor: root.cursorActive && root.cursorIndex === 0
-        enabled: root.vpnState && root.vpnState.agentAvailable && root.vpnState.backendReady &&
-          root.vpnState.signedIn && !root.vpnState.tunnelOperationBusy
+        enabled: root.vpnState && root.vpnState.agentAvailable && root.vpnState.signedIn &&
+          ((root.vpnState.connecting && root.vpnState.operationCancelable) ||
+           (root.vpnState.backendReady && !root.vpnState.tunnelOperationBusy))
         onClicked: root.vpnState.toggleConnection()
       }
     }

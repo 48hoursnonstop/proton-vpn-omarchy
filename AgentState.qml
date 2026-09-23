@@ -1168,6 +1168,7 @@ QtObject {
   }
 
   function cancelConnection() {
+    if (requestPending('connection.cancel')) return
     send('connection.cancel', {})
     stateChangedByUser()
   }
