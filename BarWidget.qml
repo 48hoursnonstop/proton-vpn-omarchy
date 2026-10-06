@@ -73,6 +73,7 @@ BarWidget {
     Qt.callLater(function() {
       root.maybeActivateBackendAtStartup()
       if (agentState.connected) root.bootWindowOpen = false
+      root.updateBootRetryEligible()
       root.fireBootRetry()
       root.maybeScheduleBootRetry()
       root.bootRetryPrimer.restart()
@@ -147,14 +148,17 @@ BarWidget {
     function onOnboardingCompleteChanged() {
       root.maybeActivateBackendAtStartup()
       if (agentState.connected) root.bootWindowOpen = false
+      root.updateBootRetryEligible()
       root.maybeScheduleBootRetry()
     }
     function onLifecyclePreferenceKnownChanged() {
       root.maybeActivateBackendAtStartup()
+      root.updateBootRetryEligible()
       root.maybeScheduleBootRetry()
     }
     function onCachedStartWithOmarchyChanged() {
       root.maybeActivateBackendAtStartup()
+      root.updateBootRetryEligible()
       root.maybeScheduleBootRetry()
     }
     function onStatusChanged() {
@@ -164,10 +168,22 @@ BarWidget {
         // auto-retry again this session (a later manual disconnect must
         // stick). Fresh shell start re-arms for the next boot.
         root.bootWindowOpen = false
-      } else root.maybeScheduleBootRetry()
+      }
+      root.updateBootRetryEligible()
+      root.maybeScheduleBootRetry()
     }
-    function onWifiConnectedChanged() { root.maybeScheduleBootRetry() }
-    function onConnectionErrorCodeChanged() { root.maybeScheduleBootRetry() }
+    function onWifiConnectedChanged() {
+      root.updateBootRetryEligible()
+      root.maybeScheduleBootRetry()
+    }
+    function onConnectionErrorCodeChanged() {
+      root.updateBootRetryEligible()
+      root.maybeScheduleBootRetry()
+    }
+    function onLastErrorCodeChanged() {
+      root.updateBootRetryEligible()
+      root.maybeScheduleBootRetry()
+    }
   }
 
   // Boot retry: the agent's headless auto-connect fires once very early and
@@ -188,18 +204,33 @@ BarWidget {
   property int bootRetryAttempts: 0
   property int bootRetryMaxAttempts: 8
   property bool bootWindowOpen: true
-  readonly property bool bootRetryEligible: agentState.autoConnect
-    && agentState.signedIn
-    && !agentState.connecting && !agentState.tunnelOperationBusy
-    && agentState.wifiConnected
-    && root.bootRetryAttempts < root.bootRetryMaxAttempts
-    && ((agentState.status === 'error' && agentState.lastErrorRetryable)
-      || (agentState.status === 'disconnected'
-        && (root.bootWindowOpen
-          || agentState.connectionErrorCode.indexOf('network_conflict') === 0
-          || agentState.connectionErrorCode.indexOf('kill_switch') === 0
-          || agentState.lastErrorCode.indexOf('network_conflict') === 0
-          || agentState.lastErrorCode.indexOf('kill_switch') === 0))))
+  property bool bootRetryEligible: false
+
+  // Recomputed imperatively (instead of a nested binding expression) so a
+  // typo can only break this function, never the whole widget.
+  function updateBootRetryEligible() {
+    var eligible = true
+    if (!agentState.autoConnect) eligible = false
+    else if (!agentState.signedIn) eligible = false
+    else if (agentState.connecting || agentState.tunnelOperationBusy) eligible = false
+    else if (!agentState.wifiConnected) eligible = false
+    else if (root.bootRetryAttempts >= root.bootRetryMaxAttempts) eligible = false
+    else if (agentState.status !== 'error' && agentState.status !== 'disconnected') eligible = false
+    else if (agentState.status === 'error' && !agentState.lastErrorRetryable) eligible = false
+    else if (agentState.status === 'disconnected' && !root.bootWindowOpen) {
+      var codes = [
+        agentState.connectionErrorCode,
+        agentState.lastErrorCode
+      ]
+      var conflict = false
+      for (var i = 0; i < codes.length; ++i) {
+        var code = String(codes[i] || '')
+        if (code.indexOf('network_conflict') === 0 || code.indexOf('kill_switch') === 0) conflict = true
+      }
+      if (!conflict) eligible = false
+    }
+    root.bootRetryEligible = eligible
+  }
 
   property Timer bootRetryTimer: Timer {
     interval: 5000
@@ -210,6 +241,7 @@ BarWidget {
   // Immediate attempt (no timer wait) for the case where wifi is already
   // up when the shell starts. Same gates and cap as the timer path.
   function fireBootRetry() {
+    root.updateBootRetryEligible()
     if (!root.bootRetryEligible) return
     root.bootRetryAttempts += 1
     console.log('proton.omarchy: boot auto-connect retry '
