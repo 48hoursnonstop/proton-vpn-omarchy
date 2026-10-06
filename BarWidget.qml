@@ -73,6 +73,7 @@ BarWidget {
     Qt.callLater(function() {
       root.maybeActivateBackendAtStartup()
       root.maybeScheduleBootRetry()
+      root.bootRetryPrimer.restart()
     })
   }
 
@@ -164,18 +165,25 @@ BarWidget {
   // Boot retry: the agent's headless auto-connect fires once very early and
   // gives up on network_conflict_detected (wifi still coming up, tailscale0
   // confusing the gateway check) with no retry. Re-issue the normal
-  // user-equivalent quick-connect a few times once wifi is up. This cannot
-  // fight an explicit user disconnect: that carries no network-conflict
-  // error code, and attempts are capped.
+  // user-equivalent quick-connect a few times once wifi is up.
+  //
+  // Gating notes: a manual user disconnect lands in 'disconnected' with no
+  // error, while a failed attempt lands in 'error' or 'disconnected' WITH a
+  // retryable error code. 'error' + retryable therefore never represents
+  // user intent; the 'disconnected' branch additionally requires an
+  // explicit network-conflict class code. Attempts are capped in all cases.
   property int bootRetryAttempts: 0
   readonly property bool bootRetryEligible: agentState.autoConnect
     && agentState.signedIn
-    && (agentState.status === 'disconnected' || agentState.status === 'error')
     && !agentState.connecting && !agentState.tunnelOperationBusy
     && agentState.wifiConnected
-    && (agentState.connectionErrorCode.indexOf('network_conflict') === 0
-      || agentState.connectionErrorCode.indexOf('kill_switch') === 0)
     && root.bootRetryAttempts < 5
+    && ((agentState.status === 'error' && agentState.lastErrorRetryable)
+      || ((agentState.status === 'disconnected' || agentState.status === 'error')
+        && (agentState.connectionErrorCode.indexOf('network_conflict') === 0
+          || agentState.connectionErrorCode.indexOf('kill_switch') === 0
+          || agentState.lastErrorCode.indexOf('network_conflict') === 0
+          || agentState.lastErrorCode.indexOf('kill_switch') === 0)))
 
   property Timer bootRetryTimer: Timer {
     interval: 15000
@@ -183,9 +191,20 @@ BarWidget {
     onTriggered: {
       if (!root.bootRetryEligible) return
       root.bootRetryAttempts += 1
+      console.log('proton.omarchy: boot auto-connect retry '
+        + root.bootRetryAttempts + '/5')
       agentState.quickConnect()
       if (root.bootRetryAttempts < 5) root.bootRetryTimer.restart()
     }
+  }
+
+  // Fixed boot-delayed safety net: signal-driven scheduling above can miss
+  // the window if the failure snapshot arrives before wifi/status signals
+  // settle, so also check once shortly after shell startup.
+  property Timer bootRetryPrimer: Timer {
+    interval: 30000
+    repeat: false
+    onTriggered: root.maybeScheduleBootRetry()
   }
 
   function maybeScheduleBootRetry() {
