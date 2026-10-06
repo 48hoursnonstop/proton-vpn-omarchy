@@ -70,7 +70,10 @@ BarWidget {
   }
 
   Component.onCompleted: {
-    Qt.callLater(function() { root.maybeActivateBackendAtStartup() })
+    Qt.callLater(function() {
+      root.maybeActivateBackendAtStartup()
+      root.maybeScheduleBootRetry()
+    })
   }
 
   function open() {
@@ -138,9 +141,56 @@ BarWidget {
 
   Connections {
     target: agentState
-    function onOnboardingCompleteChanged() { root.maybeActivateBackendAtStartup() }
-    function onLifecyclePreferenceKnownChanged() { root.maybeActivateBackendAtStartup() }
-    function onCachedStartWithOmarchyChanged() { root.maybeActivateBackendAtStartup() }
+    function onOnboardingCompleteChanged() {
+      root.maybeActivateBackendAtStartup()
+      root.maybeScheduleBootRetry()
+    }
+    function onLifecyclePreferenceKnownChanged() {
+      root.maybeActivateBackendAtStartup()
+      root.maybeScheduleBootRetry()
+    }
+    function onCachedStartWithOmarchyChanged() {
+      root.maybeActivateBackendAtStartup()
+      root.maybeScheduleBootRetry()
+    }
+    function onStatusChanged() {
+      if (agentState.connected) root.bootRetryAttempts = 0
+      else root.maybeScheduleBootRetry()
+    }
+    function onWifiConnectedChanged() { root.maybeScheduleBootRetry() }
+    function onConnectionErrorCodeChanged() { root.maybeScheduleBootRetry() }
+  }
+
+  // Boot retry: the agent's headless auto-connect fires once very early and
+  // gives up on network_conflict_detected (wifi still coming up, tailscale0
+  // confusing the gateway check) with no retry. Re-issue the normal
+  // user-equivalent quick-connect a few times once wifi is up. This cannot
+  // fight an explicit user disconnect: that carries no network-conflict
+  // error code, and attempts are capped.
+  property int bootRetryAttempts: 0
+  readonly property bool bootRetryEligible: agentState.autoConnect
+    && agentState.signedIn
+    && (agentState.status === 'disconnected' || agentState.status === 'error')
+    && !agentState.connecting && !agentState.tunnelOperationBusy
+    && agentState.wifiConnected
+    && (agentState.connectionErrorCode.indexOf('network_conflict') === 0
+      || agentState.connectionErrorCode.indexOf('kill_switch') === 0)
+    && root.bootRetryAttempts < 5
+
+  property Timer bootRetryTimer: Timer {
+    interval: 15000
+    repeat: false
+    onTriggered: {
+      if (!root.bootRetryEligible) return
+      root.bootRetryAttempts += 1
+      agentState.quickConnect()
+      if (root.bootRetryAttempts < 5) root.bootRetryTimer.restart()
+    }
+  }
+
+  function maybeScheduleBootRetry() {
+    if (root.bootRetryEligible && !root.bootRetryTimer.running)
+      root.bootRetryTimer.restart()
   }
 
   Loader {
