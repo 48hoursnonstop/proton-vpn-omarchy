@@ -58,6 +58,21 @@ BarWidget {
     if ('uninstallerState' in target) target.uninstallerState = cleanUninstaller
   }
 
+  // Headless boot auto-connect: the panel used to be the only place that
+  // called activateBackend(), so auto-connect never fired until the user
+  // opened the panel. Initialize the backend at shell startup instead,
+  // respecting the lifecycle opt-out (cachedStartWithOmarchy).
+  function maybeActivateBackendAtStartup() {
+    if (agentState.backendDemanded) return
+    if (!agentState.cachedStartWithOmarchy) return
+    if (!agentState.onboardingComplete) return
+    agentState.activateBackend()
+  }
+
+  Component.onCompleted: {
+    Qt.callLater(function() { root.maybeActivateBackendAtStartup() })
+  }
+
   function open() {
     if (panelLoader.item) {
       panelLoader.item.open()
@@ -119,6 +134,13 @@ BarWidget {
       if (action === 'split-tunneling-settings') root.openRoute('split-tunneling')
       else if (action === 'login') root.openRoute('home')
     }
+  }
+
+  Connections {
+    target: agentState
+    function onOnboardingCompleteChanged() { root.maybeActivateBackendAtStartup() }
+    function onLifecyclePreferenceKnownChanged() { root.maybeActivateBackendAtStartup() }
+    function onCachedStartWithOmarchyChanged() { root.maybeActivateBackendAtStartup() }
   }
 
   Loader {
