@@ -174,6 +174,9 @@ BarWidget {
     }
     function onWifiConnectedChanged() {
       root.updateBootRetryEligible()
+      // Wifi-up is the readiness signal: attempt immediately instead of
+      // waiting out the timer, then keep the cadence as fallback.
+      root.fireBootRetry()
       root.maybeScheduleBootRetry()
     }
     function onConnectionErrorCodeChanged() {
