@@ -156,8 +156,13 @@ BarWidget {
       root.maybeScheduleBootRetry()
     }
     function onStatusChanged() {
-      if (agentState.connected) root.bootRetryAttempts = 0
-      else root.maybeScheduleBootRetry()
+      if (agentState.connected) {
+        root.bootRetryAttempts = 0
+        // A live connection proves user intent is satisfied; never
+        // auto-retry again this session (a later manual disconnect must
+        // stick). Fresh shell start re-arms for the next boot.
+        root.bootWindowOpen = false
+      } else root.maybeScheduleBootRetry()
     }
     function onWifiConnectedChanged() { root.maybeScheduleBootRetry() }
     function onConnectionErrorCodeChanged() { root.maybeScheduleBootRetry() }
@@ -168,26 +173,31 @@ BarWidget {
   // confusing the gateway check) with no retry. Re-issue the normal
   // user-equivalent quick-connect a few times once wifi is up.
   //
-  // Gating notes: a manual user disconnect lands in 'disconnected' with no
-  // error, while a failed attempt lands in 'error' or 'disconnected' WITH a
-  // retryable error code. 'error' + retryable therefore never represents
-  // user intent; the 'disconnected' branch additionally requires an
-  // explicit network-conflict class code. Attempts are capped in all cases.
+  // Gating notes: the op-journal error code is not reliably reflected on
+  // connection.error_code in the failure snapshot, so the disconnected
+  // branch cannot depend on error codes alone. Instead it is scoped to the
+  // boot window: until the first successful connection in this shell
+  // session, a plain 'disconnected' state means failure, not user intent
+  // (there was never a connection to disconnect from). Once connected,
+  // bootWindowOpen closes permanently and only explicit error states can
+  // still trigger a retry. Attempts are capped in all cases.
   // Timing: failed attempts fail instantly while offline, so a tight 5s
   // cadence converges within ~5s of readiness at negligible cost.
   property int bootRetryAttempts: 0
   property int bootRetryMaxAttempts: 8
+  property bool bootWindowOpen: true
   readonly property bool bootRetryEligible: agentState.autoConnect
     && agentState.signedIn
     && !agentState.connecting && !agentState.tunnelOperationBusy
     && agentState.wifiConnected
     && root.bootRetryAttempts < root.bootRetryMaxAttempts
     && ((agentState.status === 'error' && agentState.lastErrorRetryable)
-      || ((agentState.status === 'disconnected' || agentState.status === 'error')
-        && (agentState.connectionErrorCode.indexOf('network_conflict') === 0
+      || (agentState.status === 'disconnected'
+        && (root.bootWindowOpen
+          || agentState.connectionErrorCode.indexOf('network_conflict') === 0
           || agentState.connectionErrorCode.indexOf('kill_switch') === 0
           || agentState.lastErrorCode.indexOf('network_conflict') === 0
-          || agentState.lastErrorCode.indexOf('kill_switch') === 0)))
+          || agentState.lastErrorCode.indexOf('kill_switch') === 0))))
 
   property Timer bootRetryTimer: Timer {
     interval: 5000
