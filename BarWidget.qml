@@ -72,6 +72,7 @@ BarWidget {
   Component.onCompleted: {
     Qt.callLater(function() {
       root.maybeActivateBackendAtStartup()
+      root.fireBootRetry()
       root.maybeScheduleBootRetry()
       root.bootRetryPrimer.restart()
     })
@@ -172,12 +173,15 @@ BarWidget {
   // retryable error code. 'error' + retryable therefore never represents
   // user intent; the 'disconnected' branch additionally requires an
   // explicit network-conflict class code. Attempts are capped in all cases.
+  // Timing: failed attempts fail instantly while offline, so a tight 5s
+  // cadence converges within ~5s of readiness at negligible cost.
   property int bootRetryAttempts: 0
+  property int bootRetryMaxAttempts: 8
   readonly property bool bootRetryEligible: agentState.autoConnect
     && agentState.signedIn
     && !agentState.connecting && !agentState.tunnelOperationBusy
     && agentState.wifiConnected
-    && root.bootRetryAttempts < 5
+    && root.bootRetryAttempts < root.bootRetryMaxAttempts
     && ((agentState.status === 'error' && agentState.lastErrorRetryable)
       || ((agentState.status === 'disconnected' || agentState.status === 'error')
         && (agentState.connectionErrorCode.indexOf('network_conflict') === 0
@@ -186,23 +190,28 @@ BarWidget {
           || agentState.lastErrorCode.indexOf('kill_switch') === 0)))
 
   property Timer bootRetryTimer: Timer {
-    interval: 15000
+    interval: 5000
     repeat: false
-    onTriggered: {
-      if (!root.bootRetryEligible) return
-      root.bootRetryAttempts += 1
-      console.log('proton.omarchy: boot auto-connect retry '
-        + root.bootRetryAttempts + '/5')
-      agentState.quickConnect()
-      if (root.bootRetryAttempts < 5) root.bootRetryTimer.restart()
-    }
+    onTriggered: root.fireBootRetry()
+  }
+
+  // Immediate attempt (no timer wait) for the case where wifi is already
+  // up when the shell starts. Same gates and cap as the timer path.
+  function fireBootRetry() {
+    if (!root.bootRetryEligible) return
+    root.bootRetryAttempts += 1
+    console.log('proton.omarchy: boot auto-connect retry '
+      + root.bootRetryAttempts + '/' + root.bootRetryMaxAttempts)
+    agentState.quickConnect()
+    if (root.bootRetryAttempts < root.bootRetryMaxAttempts)
+      root.bootRetryTimer.restart()
   }
 
   // Fixed boot-delayed safety net: signal-driven scheduling above can miss
   // the window if the failure snapshot arrives before wifi/status signals
   // settle, so also check once shortly after shell startup.
   property Timer bootRetryPrimer: Timer {
-    interval: 30000
+    interval: 10000
     repeat: false
     onTriggered: root.maybeScheduleBootRetry()
   }
