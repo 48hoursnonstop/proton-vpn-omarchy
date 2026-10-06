@@ -72,6 +72,7 @@ BarWidget {
   Component.onCompleted: {
     Qt.callLater(function() {
       root.maybeActivateBackendAtStartup()
+      if (agentState.connected) root.bootWindowOpen = false
       root.fireBootRetry()
       root.maybeScheduleBootRetry()
       root.bootRetryPrimer.restart()
@@ -145,6 +146,7 @@ BarWidget {
     target: agentState
     function onOnboardingCompleteChanged() {
       root.maybeActivateBackendAtStartup()
+      if (agentState.connected) root.bootWindowOpen = false
       root.maybeScheduleBootRetry()
     }
     function onLifecyclePreferenceKnownChanged() {
