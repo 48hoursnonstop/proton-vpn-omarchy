@@ -21,6 +21,8 @@ QtObject {
   property string entryCountryCode: 'IS'
   property bool secureCore: true
   property string countryName: 'Switzerland'
+  property string hostCountryCode: ''
+  property string hostCountryName: ''
   property string city: 'Zurich'
   property string serverName: 'CH#42'
   property string serverIp: '198.51.100.42'
@@ -228,6 +230,8 @@ QtObject {
   property bool connectionFeedbackAvailable: false
   property bool connectionFeedbackViewed: true
   property bool connectionFeedbackSent: false
+  property bool connectionFeedbackVisible: false
+  readonly property QtObject connectionFeedbackTimer: QtObject { property bool expired: false }
 
   signal requestFinished(string requestId, string method, bool ok, string errorCode)
   signal trafficUpdated()
