@@ -58,6 +58,8 @@ BarWidget {
     if ('uninstallerState' in target) target.uninstallerState = cleanUninstaller
   }
 
+  ProtonStartup { vpnState: agentState }
+
   function open() {
     if (panelLoader.item) {
       panelLoader.item.open()
