@@ -15,11 +15,12 @@ Rust agent, protocol, Rust/eBPF service and reproducible Arch packaging live in
 Proton's official ProTun service remains an external dependency and is not
 redistributed by either repository.
 
-Version **0.9.7** restores saved sessions when the desktop keyring
-starts late or unlocks after login. It adds a waiting state and manual retry,
-while preserving the native Omarchy interface and 0.9.6-rc1 credential format.
-The verified installer pins core **v0.9.7** (Arch package **0.9.7-2**).
-See the [release notes](docs/releases/0.9.7.md).
+Version **0.9.9** adds bounded startup retries that respect cancellation,
+fixes LAN bypass routing, and ships the connection and server-validation
+improvements previously tested in the local preview. It preserves the native
+Omarchy interface, saved-session recovery and 0.9.6-rc1 credential format.
+The verified installer pins core **v0.9.9** (Arch package **0.9.9-1**).
+See the [release notes](docs/releases/0.9.9.md).
 
 ## Screenshots
 
@@ -79,18 +80,18 @@ the shell process. Review the source in this repository before confirming.
 If the guided installer cannot be used, its equivalent manual flow is:
 
 ```bash
-curl -fL --proto '=https' --max-filesize 4394772 -o proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7/proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst
-curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7/proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.sig
-curl -fL --proto '=https' --max-filesize 11396 -o proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7/proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.intoto.jsonl
-curl -fL --proto '=https' --max-filesize 819 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.7/RELEASE-SIGNING-KEY.asc
-printf '%s  %s\n' 091f7cb3e1831dbea4c5a4b79e50192754a9a30bea781c555f925599bd4f3749 proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst | sha256sum -c -
-printf '%s  %s\n' 858e4de483c366e2041dc482551673d227e88bed617e87db895676acc0322588 proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.sig | sha256sum -c -
-printf '%s  %s\n' 89e4269d6443c9f4c55f0fed3fa9548742806a4cba58c313b6ce071416fa96e4 proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
-gh attestation verify proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.7 --source-digest 7f1d2bf51359a799ed1c1fcfc609291cdcd4aad4 --deny-self-hosted-runners
+curl -fL --proto '=https' --max-filesize 4423974 -o proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.9/proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst
+curl -fL --proto '=https' --max-filesize 119 -o proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.sig https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.9/proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.sig
+curl -fL --proto '=https' --max-filesize 11382 -o proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.intoto.jsonl https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.9/proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.intoto.jsonl
+curl -fL --proto '=https' --max-filesize 819 -o RELEASE-SIGNING-KEY.asc https://github.com/48hoursnonstop/proton-vpn-omarchy-core/releases/download/v0.9.9/RELEASE-SIGNING-KEY.asc
+printf '%s  %s\n' bb33d6e421c79fea1cca39cc9f13974d022522fe391fb8a29caa886594c3094e proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst | sha256sum -c -
+printf '%s  %s\n' a776c8676e0e93f791b9bca9c62edc64fb7bd6e1eab80e6b9890d28439d979ed proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.sig | sha256sum -c -
+printf '%s  %s\n' 3fc4f1400e42098285dcfab1f654514c56f4e350a84b89a7c260920674b09dfb proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.intoto.jsonl | sha256sum -c -
+gh attestation verify proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst --bundle proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.intoto.jsonl --repo 48hoursnonstop/proton-vpn-omarchy-core --signer-workflow 48hoursnonstop/proton-vpn-omarchy-core/.github/workflows/release.yml --source-ref refs/tags/v0.9.9 --source-digest 35e63bb5756b2eabbc0668b921c5c8a4d41f2933 --deny-self-hosted-runners
 test "$(gpg --show-keys --with-colons RELEASE-SIGNING-KEY.asc | awk -F: '$1 == "fpr" { print $10; exit }')" = "60F7F9724C0A7AD1337F598EB50BA28309B120BA"
 gpg --import RELEASE-SIGNING-KEY.asc
-gpg --verify proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst
-sudo pacman -U ./proton-vpn-omarchy-0.9.7-2-x86_64.pkg.tar.zst
+gpg --verify proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst.sig proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst
+sudo pacman -U ./proton-vpn-omarchy-0.9.9-1-x86_64.pkg.tar.zst
 proton-omarchy-setup backend
 ```
 
@@ -203,6 +204,6 @@ data/config directories.
 
 The release contains the backend's corresponding source archive and Arch build
 recipe; the same code is browsable in the
-[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.7).
+[core repository](https://github.com/48hoursnonstop/proton-vpn-omarchy-core/tree/v0.9.9).
 Project code is licensed under GPL-3.0-or-later; individual upstream assets
 retain their original notices. See [NOTICE.md](NOTICE.md).

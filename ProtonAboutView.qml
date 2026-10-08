@@ -44,7 +44,7 @@ Item {
       rowFontFamily: root.fontFamily
       iconName: 'brand_proton_vpn'
       title: root.label('version')
-      subtitle: root.vpnState ? root.vpnState.clientVersion : '0.9.7'
+      subtitle: root.vpnState ? root.vpnState.clientVersion : '0.9.9'
     }
 
     PanelActionRow {
