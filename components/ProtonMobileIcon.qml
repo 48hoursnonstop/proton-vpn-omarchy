@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 
 // Shared renderer for Proton's pinned Android/Core iconography. Vector assets
 // keep their original geometry; the few Android clip-path icons use 192px PNG
@@ -11,7 +12,7 @@ Item {
 
   property string iconName: ''
   property url sourceOverride: ''
-  property color iconColor: Color.foreground
+  property color iconColor: Commons.Color.foreground
   property real iconSize: Style.font.iconLarge
   property real iconWidth: iconSize
   property bool tint: true

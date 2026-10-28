@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -10,8 +11,8 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property bool editing: false
@@ -520,7 +521,7 @@ Item {
         width: parent.width
         placeholderText: root.label('profile_name')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         maximumLength: 60
       }
@@ -729,7 +730,7 @@ Item {
         fieldLabel: root.label('custom_dns')
         text: root.customDnsText
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         maximumLength: 512
         onTextChanged: root.customDnsText = text
@@ -874,7 +875,7 @@ Item {
           fieldLabel: root.label('open_website')
           text: root.connectAndGoUrl
           foreground: root.foreground
-          accent: Color.accent
+          accent: Commons.Color.accent
           font.family: root.fontFamily
           maximumLength: 2048
           onTextChanged: root.connectAndGoUrl = text

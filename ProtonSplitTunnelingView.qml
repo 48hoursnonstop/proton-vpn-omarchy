@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -10,8 +11,8 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string mode: vpnState && vpnState.splitTunnelingMode === 'inverse'
@@ -153,7 +154,7 @@ Item {
       width: parent.width
       placeholderText: root.label('search_apps')
       foreground: root.foreground
-      accent: Color.accent
+      accent: Commons.Color.accent
       font.family: root.fontFamily
       onTextChanged: appSearch.restart()
     }
@@ -202,7 +203,7 @@ Item {
         Layout.fillWidth: true
         placeholderText: root.label('manual_executable')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         onAccepted: {
           root.toggleExecutable(text)
@@ -270,7 +271,7 @@ Item {
         placeholderText: root.label('ip_range_placeholder')
         fieldLabel: root.label('ip_ranges')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         onAccepted: {
           root.addIpRange(text)

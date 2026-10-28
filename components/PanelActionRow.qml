@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import '.' as ProtonComponents
 
@@ -19,7 +20,7 @@ CursorSurface {
   property string specialFlag: ''
   property string profileIconName: ''
   property color profileIconColor: '#C857E7'
-  property color flagBackground: Color.popups.background
+  property color flagBackground: Commons.Color.popups.background
   property bool iconTint: true
   property real iconSize: Style.font.iconLarge
   property real iconWidth: iconSize
@@ -33,9 +34,9 @@ CursorSurface {
   property bool checked: false
   property bool busy: false
   property bool hasKeyboardCursor: false
-  property color rowForeground: Color.foreground
+  property color rowForeground: Commons.Color.foreground
   property color dimForeground: ProtonUi.secondaryText(rowForeground)
-  property color iconForeground: checked ? Color.accent : dimForeground
+  property color iconForeground: checked ? Commons.Color.accent : dimForeground
   property string rowFontFamily: Style.font.family
   readonly property bool hasProfileIcon: profileIconName !== ''
   readonly property bool hasFlag: flagCode !== '' || specialFlag !== ''
@@ -59,7 +60,7 @@ CursorSurface {
   activeFocusOnTab: enabled && !busy
   hasCursor: enabled && (hasKeyboardCursor || keyboardFocus || rowMouse.containsMouse)
   borderSpec: keyboardFocus || hasKeyboardCursor
-    ? Border.controlSpec('focus', rowForeground, Color.accent) : Border.none()
+    ? Border.controlSpec('focus', rowForeground, Commons.Color.accent) : Border.none()
   Accessible.role: toggleVisible ? Accessible.CheckBox : Accessible.Button
   Accessible.name: title
   Accessible.description: subtitle + (detail ? '. ' + detail : '')
@@ -91,9 +92,9 @@ CursorSurface {
   onEnabledChanged: if (!enabled) spaceHeld = false
   onBusyChanged: if (busy) spaceHeld = false
   foreground: rowForeground
-  fill: pressed ? Style.pressedFillFor(rowForeground, Color.accent)
-    : Style.hoverFillFor(rowForeground, Color.accent)
-  currentFill: Style.selectedFillFor(rowForeground, Color.accent)
+  fill: pressed ? Style.pressedFillFor(rowForeground, Commons.Color.accent)
+    : Style.hoverFillFor(rowForeground, Commons.Color.accent)
+  currentFill: Style.selectedFillFor(rowForeground, Commons.Color.accent)
   implicitHeight: Math.max(ProtonUi.controlHeight, rowContent.implicitHeight + Style.space(16))
   opacity: enabled ? 1.0 : 0.45
 
@@ -213,7 +214,7 @@ CursorSurface {
         objectName: 'row-detail-icon'
         rotation: root.detailIconRotation
         Behavior on rotation { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
-        iconColor: root.checked ? Color.accent : root.dimForeground
+        iconColor: root.checked ? Commons.Color.accent : root.dimForeground
         iconSize: Style.font.iconSmall
       }
     }

@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import '.' as ProtonComponents
 
 // Profile connections mirror Proton's overlapping destination treatment:
@@ -10,7 +11,7 @@ Item {
   property string countryCode: ''
   property string profileCategory: 'Speed'
   property color profileColor: '#C857E7'
-  property color backgroundColor: Color.popups.background
+  property color backgroundColor: Commons.Color.popups.background
 
   implicitWidth: Style.space(30)
   implicitHeight: Style.space(24)

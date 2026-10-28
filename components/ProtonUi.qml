@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 // Local roles derived from Omarchy, never a separate plugin theme.
 QtObject {
@@ -30,17 +31,17 @@ QtObject {
   }
 
   function secondaryText(foreground) {
-    var background = blend(Color.popups.background, Color.background, Color.popups.background.a)
+    var background = blend(Commons.Color.popups.background, Commons.Color.background, Commons.Color.popups.background.a)
     var surfaces = [background]
-    var fills = [Style.normalFillFor(foreground, Color.accent),
-      Style.hoverFillFor(foreground, Color.accent), Style.focusFillFor(foreground, Color.accent),
-      Style.selectedFillFor(foreground, Color.accent)]
+    var fills = [Style.normalFillFor(foreground, Commons.Color.accent),
+      Style.hoverFillFor(foreground, Commons.Color.accent), Style.focusFillFor(foreground, Commons.Color.accent),
+      Style.selectedFillFor(foreground, Commons.Color.accent)]
     for (var i = 0; i < fills.length; ++i) surfaces.push(blend(fills[i], background, fills[i].a))
     function readable(color) {
       for (var i = 0; i < surfaces.length; ++i) if (contrast(color, surfaces[i]) < 4.5) return false
       return true
     }
-    if (readable(Color.muted)) return Color.muted
+    if (readable(Commons.Color.muted)) return Commons.Color.muted
     for (var amount = 0.65; amount < 1; amount += 0.05) {
       var candidate = blend(foreground, background, amount)
       if (readable(candidate)) return candidate

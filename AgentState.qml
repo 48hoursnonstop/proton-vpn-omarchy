@@ -52,6 +52,9 @@ QtObject {
   property string accountStatus: 'unknown'
   property string accountName: ''
   property int accountTier: -1
+  onAccountTierChanged: {
+    if (agentAvailable && signedIn && backendDemanded) Qt.callLater(loadLocations)
+  }
   property bool accountCredentialless: false
   property bool twoFactorCodeSupported: false
   property bool twoFactorSecurityKeySupported: false
@@ -62,6 +65,8 @@ QtObject {
   readonly property bool reportIssueSupported:
     supportsMethod('report_issue.categories.get') && supportsMethod('report_issue.submit')
   readonly property bool accountUpgradeSupported: supportsMethod('account.upgrade_url')
+  readonly property bool accountRefreshSupported: supportsMethod('account.refresh')
+  readonly property bool guestHoleActive: operationBusy && operationStage.indexOf('guest_hole.') === 0
 
   property bool storeReady: false
   property int storeRevision: 0
@@ -682,6 +687,14 @@ QtObject {
       backendActivationRequested = true
       send('account.get', {})
     }
+  }
+
+  function refreshAccount() {
+    return accountRefreshSupported ? send('account.refresh', {}) : ''
+  }
+
+  function cancelGuestHole() {
+    return send('guest_hole.cancel', {})
   }
 
   function requestConnectionObservation() {
@@ -1372,6 +1385,7 @@ QtObject {
         if (message.result.logged_in) requestConnectionObservation()
         else maybeRunQueuedAction()
       }
+      else if (completedMethod === 'account.refresh') loadLocations()
       else if (completedMethod === 'connection.observe') {
         connectionObservationRequested = false
         maybeRunQueuedAction()

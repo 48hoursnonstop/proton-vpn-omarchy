@@ -66,10 +66,15 @@ ShellRoot {
   function press(key, modifiers) { check(keyboard.keyClick(key, modifiers || Qt.NoModifier, -1), 'key event delivered') }
   function focusedName() { return window.contentItem.Window.window.activeFocusItem.Accessible.name }
   Timer {
+    id: phaseTimer
     interval: 80
     repeat: true
     running: !suite.finished
     onTriggered: {
+      // QtTest injectors enter a nested event loop; do not re-enter a later
+      // phase while the current one still owns its QML objects.
+      phaseTimer.stop()
+      try {
       switch (suite.phase++) {
       case 0:
         check(workspace.route === 'home' && !workspace.inputViewVisible, 'signed-in home')
@@ -155,6 +160,9 @@ ShellRoot {
         finished = true
         console.log('WORKSPACE_QML', true)
         Qt.quit()
+      }
+      } finally {
+        if (!suite.finished) phaseTimer.start()
       }
     }
   }

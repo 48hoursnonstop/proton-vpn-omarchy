@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -9,8 +10,8 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property int categoryIndex: -1
@@ -224,7 +225,7 @@ Item {
         width: parent.width
         placeholderText: root.label('email')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         inputMethodHints: Qt.ImhEmailCharactersOnly
         onTextChanged: root.confirmingOfficialReport = false
@@ -243,7 +244,7 @@ Item {
             fieldLabel: String(modelData.label || modelData.placeholder || '') + (modelData.is_mandatory ? ' *' : '')
             placeholderText: String(modelData.placeholder || '')
             foreground: root.foreground
-            accent: Color.accent
+            accent: Commons.Color.accent
             font.family: root.fontFamily
             onTextChanged: root.setField(modelData.submit_label, text)
           }
@@ -326,7 +327,7 @@ Item {
         root.vpnState.reportSubmitted
       width: parent.width
       text: root.label('official_report_sent')
-      color: Color.accent
+      color: Commons.Color.accent
       font.family: root.fontFamily
       font.pixelSize: Style.font.body
       wrapMode: Text.WordWrap

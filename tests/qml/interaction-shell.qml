@@ -3,6 +3,7 @@ import QtQuick.Window
 import QtTest
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import 'components'
 
 ShellRoot {
@@ -70,10 +71,15 @@ ShellRoot {
   function release(key) { events.keyRelease(key, Qt.NoModifier, -1) }
   function click(key) { events.keyClick(key, Qt.NoModifier, -1) }
   Timer {
+    id: phaseTimer
     interval: 170
     repeat: true
     running: !finished
     onTriggered: {
+      // QtTest injectors enter a nested event loop; do not re-enter a later
+      // phase while the current one still owns its QML objects.
+      phaseTimer.stop()
+      try {
       switch (step++) {
       case 0:
         workspace.setRoute('settings')
@@ -151,7 +157,7 @@ ShellRoot {
         check(row.pressed && rowCalls === 0, 'Space has held feedback without activation')
         break
       case 15:
-        check(row.fill === Style.pressedFillFor(row.rowForeground, Color.accent), 'native pressed color')
+        check(row.fill === Style.pressedFillFor(row.rowForeground, Commons.Color.accent), 'native pressed color')
         press(Qt.Key_Space)
         check(rowCalls === 0, 'held row does not repeat')
         release(Qt.Key_Space)
@@ -184,6 +190,9 @@ ShellRoot {
         finished = true
         console.log('INTERACTION_QML', true)
         Qt.quit()
+      }
+      } finally {
+        if (!suite.finished) phaseTimer.start()
       }
     }
   }

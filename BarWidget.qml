@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -24,7 +25,7 @@ BarWidget {
 
   // Bar chrome uses barForeground rather than the popup/content foreground.
   // Omarchy changes this value when transparent-bar contrast is active.
-  readonly property color statusColor: bar ? bar.barForeground : Color.foreground
+  readonly property color statusColor: bar ? bar.barForeground : Commons.Color.foreground
   readonly property string statusIconState: {
     if (agentState.connected) return 'connected'
     if (agentState.status === 'connecting' || agentState.tunnelOperationBusy) return 'connecting'

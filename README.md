@@ -22,6 +22,14 @@ saved-session recovery and 0.9.6-rc1 credential format are preserved.
 The verified installer pins core **v0.9.10** (Arch package **0.9.10-1**).
 See the [release notes](docs/releases/0.9.10.md).
 
+The local 2026-10-28 working branch fixes Qt 6.12 color resolution and adds
+capability-negotiated account refresh and Guest Hole cancellation. The companion
+core contains the routing, observation and API-recovery changes; it requires a
+matching local build. The signed installer remains pinned to the stable release.
+Automatic crash uploads remain outside project scope; English and Spanish remain
+the supported interface languages. Live Guest Hole connectivity is still pending
+validation on an unrestricted test network.
+
 ## Screenshots
 
 The same production Home view inherits each Omarchy theme without a separate

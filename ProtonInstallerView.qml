@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 import 'components' as ProtonComponents
@@ -11,8 +12,8 @@ Item {
   property QtObject installerState: null
   property QtObject uninstallerState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
@@ -54,7 +55,7 @@ Item {
         ProtonComponents.ProtonVpnMark {
           iconSize: Style.font.display
           statusColor: root.failed ? root.urgent
-            : root.busy ? root.foreground : Color.accent
+            : root.busy ? root.foreground : Commons.Color.accent
           state: root.failed ? 'disconnected'
             : root.busy ? 'connecting' : 'information'
         }
@@ -93,7 +94,7 @@ Item {
             1, root.installerState ? root.installerState.progress / 100 : 0))
           height: parent.height
           radius: parent.radius
-          color: root.failed ? root.urgent : Color.accent
+          color: root.failed ? root.urgent : Commons.Color.accent
 
           Behavior on width { NumberAnimation { duration: 180 } }
         }

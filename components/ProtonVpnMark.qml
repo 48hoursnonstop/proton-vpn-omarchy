@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 Item {
   id: root
-  property color statusColor: Color.foreground
+  property color statusColor: Commons.Color.foreground
   property bool connected: false
   property bool connecting: false
   property bool information: false

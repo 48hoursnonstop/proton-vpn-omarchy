@@ -37,10 +37,15 @@ ShellRoot {
     if (!ok) { finished = true; Qt.callLater(Qt.quit); throw new Error('CONNECTION CANCEL: ' + message) }
   }
   Timer {
+    id: phaseTimer
     interval: 160
     repeat: true
     running: !finished
     onTriggered: {
+      // QtTest injectors enter a nested event loop; do not re-enter a later
+      // phase while the current one still owns its QML objects.
+      phaseTimer.stop()
+      try {
       var button = find(workspace)
       switch (step++) {
       case 0:
@@ -73,6 +78,9 @@ ShellRoot {
         finished = true
         console.log('CONNECTION_CANCEL_QML true')
         Qt.quit()
+      }
+      } finally {
+        if (!suite.finished) phaseTimer.start()
       }
     }
   }

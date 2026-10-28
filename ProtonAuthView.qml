@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -10,8 +11,8 @@ Item {
   property QtObject vpnState: null
   property QtObject uninstallerState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property bool securityKeyMode: false
@@ -124,10 +125,22 @@ Item {
       iconComponent: Component {
         ProtonVpnMark {
           iconSize: Style.font.display
-          statusColor: Color.accent
+          statusColor: Commons.Color.accent
           state: root.authBusy ? 'connecting' : 'information'
         }
       }
+    }
+
+    ProtonButton {
+      objectName: 'guest-hole-cancel'
+      visible: !!(root.vpnState && root.vpnState.guestHoleActive)
+      width: parent.width
+      label: root.label('cancel')
+      foreground: root.foreground
+      fontFamily: root.fontFamily
+      enabled: root.vpnState && root.vpnState.operationCancelable &&
+        !root.vpnState.requestPending('guest_hole.cancel')
+      onClicked: root.vpnState.cancelGuestHole()
     }
 
     ProtonButton {
@@ -188,7 +201,7 @@ Item {
         width: parent.width
         placeholderText: root.label('username')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         enabled: root.authAvailable && !root.authBusy
@@ -203,7 +216,7 @@ Item {
         password: true
         placeholderText: root.label('password')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         enabled: root.authAvailable && !root.authBusy
@@ -265,7 +278,7 @@ Item {
         width: parent.width
         placeholderText: root.label('two_factor_code')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         horizontalAlignment: TextInput.AlignHCenter
@@ -317,7 +330,7 @@ Item {
         password: true
         placeholderText: root.label('security_key_pin')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         enabled: root.authAvailable && !root.pinRequestBusy

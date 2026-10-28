@@ -46,10 +46,15 @@ ShellRoot {
     return find(workspace, function(item) { return item.visible && item.text === value })
   }
   Timer {
+    id: phaseTimer
     interval: 150
     repeat: true
     running: !suite.finished
     onTriggered: {
+      // QtTest injectors enter a nested event loop; do not re-enter a later
+      // phase while the current one still owns its QML objects.
+      phaseTimer.stop()
+      try {
       switch (suite.phase++) {
       case 0:
         check(workspace.authVisible, 'recovery gates VPN controls')
@@ -85,6 +90,9 @@ ShellRoot {
         finished = true
         console.log('KEYRING_RECOVERY_QML', true)
         Qt.quit()
+      }
+      } finally {
+        if (!suite.finished) phaseTimer.start()
       }
     }
   }

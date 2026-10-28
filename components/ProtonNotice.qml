@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 BorderSurface {
@@ -8,11 +9,11 @@ BorderSurface {
   property string message: ''
   property string hint: ''
   property bool error: false
-  property color foreground: Color.popups.text
+  property color foreground: Commons.Color.popups.text
   property string fontFamily: Style.font.family
   width: parent ? parent.width : implicitWidth
   implicitHeight: contents.implicitHeight + Style.space(20)
-  color: Style.normalFillFor(foreground, Color.accent)
+  color: Style.normalFillFor(foreground, Commons.Color.accent)
   radius: Style.cornerRadius
   Accessible.role: Accessible.StaticText
   Accessible.name: message + (hint ? '. ' + hint : '')
@@ -26,7 +27,7 @@ BorderSurface {
     ProtonMobileIcon {
       Layout.alignment: Qt.AlignTop
       iconName: root.error ? 'exclamation_triangle_filled' : 'info_circle'
-      iconColor: root.error ? Color.urgent : root.foreground
+      iconColor: root.error ? Commons.Color.urgent : root.foreground
       iconSize: Style.font.icon
     }
     Column {

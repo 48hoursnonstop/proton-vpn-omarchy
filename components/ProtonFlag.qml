@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 
 // Renders Proton's official country flags and the Fastest/Random/Latest/Gateway
 // destination marks. Country flags are 24:16; special destinations are 30:20.
@@ -10,7 +11,7 @@ Item {
 
   property string countryCode: ''
   property string specialName: ''
-  property color backgroundColor: Color.popups.background
+  property color backgroundColor: Commons.Color.popups.background
 
   readonly property string normalizedCountryCode: {
     var code = String(countryCode || '').trim().toUpperCase()

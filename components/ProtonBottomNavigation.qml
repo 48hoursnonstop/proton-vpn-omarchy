@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 // Persistent native destination controls, shared by the panel and previews.
@@ -8,7 +9,7 @@ Item {
   id: root
   property var destinations: []
   property string currentRoute: 'home'
-  property color foreground: Color.popups.text
+  property color foreground: Commons.Color.popups.text
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   signal routeRequested(string route)

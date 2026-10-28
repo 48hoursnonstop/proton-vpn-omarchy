@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -11,8 +12,8 @@ Item {
   property QtObject vpnState: null
   property QtObject uninstallerState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string selectedLocale: vpnState
@@ -63,7 +64,7 @@ Item {
       iconComponent: Component {
         ProtonVpnMark {
           iconSize: Style.font.display
-          statusColor: Color.accent
+          statusColor: Commons.Color.accent
           state: root.storeBusy ? 'connecting' : 'information'
         }
       }

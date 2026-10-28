@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 
 // Official Proton Android navigation glyphs, recolored by Quattro at runtime.
 // The 24dp source canvas is decoded at the current device scale so fractional
@@ -11,7 +12,7 @@ Item {
 
   property string iconName: ''
   property bool selected: false
-  property color iconColor: Color.foreground
+  property color iconColor: Commons.Color.foreground
   property real iconSize: Style.font.iconLarge
 
   readonly property string variantSuffix: selected ? '_filled' : ''

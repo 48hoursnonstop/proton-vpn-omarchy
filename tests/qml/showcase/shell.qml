@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components' as ProtonComponents
 
@@ -48,8 +49,8 @@ ShellRoot {
     BorderSurface {
       id: captureRoot
       anchors.fill: parent
-      color: Color.popups.background
-      borderSpec: Border.surfaceSpec('popups', 'border', Color.popups.border, Math.max(1, Style.space(2)))
+      color: Commons.Color.popups.background
+      borderSpec: Border.surfaceSpec('popups', 'border', Commons.Color.popups.border, Math.max(1, Style.space(2)))
       padding: Style.spacing.popupPadding
       radius: Style.cornerRadius
       ProtonWorkspace {
@@ -70,10 +71,10 @@ ShellRoot {
     interval: 300
     running: true
     onTriggered: {
-      Color.loadColors(palette.text())
-      Color.loadUserShell('')
-      Color.loadShell(surface.text())
-      Style.applyShellValues(Color.shellValues)
+      Commons.Color.loadColors(palette.text())
+      Commons.Color.loadUserShell('')
+      Commons.Color.loadShell(surface.text())
+      Style.applyShellValues(Commons.Color.shellValues)
       if (showcaseState.connected) showcaseState.seedTrafficHistory()
       var fontSize = Number(Quickshell.env('PROTON_SHOWCASE_FONT_SIZE'))
       if (fontSize > 0) Style.fontBaseSize = fontSize
@@ -100,7 +101,7 @@ ShellRoot {
         workspace.currentPage.iconPickerVisible = true
       }
       console.log('SHOWCASE_CONTRAST', ProtonComponents.ProtonUi.contrast(
-        workspace.dim, Color.popups.background))
+        workspace.dim, Commons.Color.popups.background))
     }
   }
   Timer {

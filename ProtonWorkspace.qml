@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Window
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -16,8 +17,8 @@ FocusScope {
   property QtObject installerState: null
   property QtObject uninstallerState: null
   property QtObject strings: stringTable
-  property color foreground: Color.popups.text
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.popups.text
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string route: 'home'
@@ -327,6 +328,17 @@ FocusScope {
           ? root.strings.operationStage(root.vpnState.operationStage)
           : root.vpnState.lastError ? root.strings.error(root.vpnState.lastErrorCode, root.vpnState.lastError) : ''
         hint: error && root.vpnState.lastErrorRetryable ? root.strings.text('retryable_hint') : ''
+      }
+      ProtonButton {
+        objectName: 'guest-hole-cancel'
+        width: parent.width
+        visible: !root.inputViewVisible && !!(root.vpnState && root.vpnState.guestHoleActive)
+        label: root.strings.text('cancel')
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        enabled: root.vpnState && root.vpnState.operationCancelable &&
+          !root.vpnState.requestPending('guest_hole.cancel')
+        onClicked: root.vpnState.cancelGuestHole()
       }
     }
   }

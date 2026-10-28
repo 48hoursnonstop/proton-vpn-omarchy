@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 
 // Inline native single-choice list. Callers provide exact choices;
 // opening a row never mutates state and choosing one value takes one action.
@@ -8,7 +9,7 @@ Item {
 
   property var options: []
   property var currentValue: null
-  property color foreground: Color.foreground
+  property color foreground: Commons.Color.foreground
   property string fontFamily: Style.font.family
   property bool busy: false
 

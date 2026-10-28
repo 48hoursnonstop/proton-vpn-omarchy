@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import '.' as ProtonComponents
 
 // Secure Core uses Proton's two-flag composition: entry behind, exit in front.
@@ -8,7 +9,7 @@ Item {
 
   property string exitCountryCode: ''
   property string entryCountryCode: ''
-  property color backgroundColor: Color.popups.background
+  property color backgroundColor: Commons.Color.popups.background
 
   implicitWidth: Style.space(30)
   implicitHeight: Style.space(24)

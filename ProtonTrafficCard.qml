@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components' as ProtonComponents
 
@@ -12,7 +13,7 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
+  property color foreground: Commons.Color.foreground
   property color dim: ProtonComponents.ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   readonly property QtObject monitor: vpnState ? vpnState.trafficMonitor : null
@@ -32,7 +33,7 @@ Item {
   onForegroundChanged: if (renderActive) chart.requestPaint()
   onDownloadColorChanged: if (renderActive) chart.requestPaint()
 
-  readonly property color downloadColor: Color.accent
+  readonly property color downloadColor: Commons.Color.accent
   readonly property color uploadColor: foreground
   readonly property bool trafficKnown: monitor ? monitor.known : false
 

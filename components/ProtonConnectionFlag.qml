@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import '.' as ProtonComponents
 
 // Chooses Proton's simple or Secure Core two-flag representation.
@@ -8,7 +9,7 @@ Item {
 
   property string exitCountryCode: ''
   property string entryCountryCode: ''
-  property color backgroundColor: Color.popups.background
+  property color backgroundColor: Commons.Color.popups.background
 
   readonly property bool secureCore: entryCountryCode !== ''
 

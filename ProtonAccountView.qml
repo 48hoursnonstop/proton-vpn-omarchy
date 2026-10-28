@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 
@@ -8,8 +9,8 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
 
@@ -53,6 +54,19 @@ Item {
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall
       wrapMode: Text.WordWrap
+    }
+
+    PanelActionRow {
+      objectName: 'account-refresh'
+      visible: !!(root.vpnState && root.vpnState.accountRefreshSupported)
+      width: parent.width
+      rowForeground: root.foreground
+      rowFontFamily: root.fontFamily
+      iconName: 'arrows_rotate'
+      title: root.label('refresh_account')
+      busy: !!(root.vpnState && root.vpnState.requestPending('account.refresh'))
+      enabled: root.vpnState && !root.vpnState.authBusy
+      onActivated: root.vpnState.refreshAccount()
     }
 
     PanelActionRow {

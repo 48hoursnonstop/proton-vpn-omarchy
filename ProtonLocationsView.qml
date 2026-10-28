@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import 'components'
 import 'i18n/Search.js' as Search
@@ -11,8 +12,8 @@ Item {
 
   property QtObject vpnState: null
   property QtObject strings: null
-  property color foreground: Color.foreground
-  property color urgent: Color.urgent
+  property color foreground: Commons.Color.foreground
+  property color urgent: Commons.Color.urgent
   property color dim: ProtonUi.secondaryText(foreground)
   property string fontFamily: Style.font.family
   property string section: 'countries'
@@ -709,7 +710,7 @@ Item {
         Layout.fillWidth: true
         placeholderText: root.label('search_locations')
         foreground: root.foreground
-        accent: Color.accent
+        accent: Commons.Color.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         horizontalPadding: Style.spacing.controlGap
@@ -746,7 +747,7 @@ Item {
       opacity: root.searchPending ? 1 : 0
       Behavior on opacity { NumberAnimation { duration: ProtonUi.transitionMs; easing.type: Easing.OutCubic } }
       Accessible.ignored: !root.searchPending
-      color: Color.accent
+      color: Commons.Color.accent
     }
 
     Timer {

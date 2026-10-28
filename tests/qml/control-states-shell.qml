@@ -8,6 +8,7 @@ ShellRoot {
   id: suite
   property int step: 0
   property bool finished: false
+  property int settlingAttempts: 0
   property var target: null
   property var search: null
   property real searchWidth: 0
@@ -43,16 +44,24 @@ ShellRoot {
     return Border.left(item.borderSpec) === 0 && Border.right(item.borderSpec) === 0 && Border.top(item.borderSpec) === 0
   }
   Timer {
+    id: phaseTimer
     interval: 180
     repeat: true
     running: !suite.finished
     onTriggered: {
+      // QtTest injectors enter a nested event loop; do not re-enter a later
+      // phase while the current one still owns its QML objects.
+      phaseTimer.stop()
+      try {
       switch (suite.step++) {
       case 0:
         target = find(workspace, 'Countries')
         click(target)
         break
       case 1:
+        // Shell color transitions may finish after the next timer tick.
+        if (target.color !== Style.selectedFillFor(target.foreground, target.accent) && settlingAttempts++ < 10) { suite.step--; break }
+        settlingAttempts = 0
         check(workspace.route === 'locations', 'pointer changes page')
         check(target.activeFocus && target.pointerFocus && noFrame(target) && target.color === Style.selectedFillFor(target.foreground, target.accent), 'clicked tab retains the native selected fill without a stuck focus frame or fill')
         search = find(workspace, 'Search country, city or server')
@@ -71,6 +80,9 @@ ShellRoot {
         click(target)
         break
       case 4:
+        // Shell color transitions may finish after the next timer tick.
+        if (target.color !== Style.selectedFillFor(target.foreground, target.accent) && settlingAttempts++ < 10) { suite.step--; break }
+        settlingAttempts = 0
         check(workspace.currentPage.settingsSection === 'application', 'pointer changes settings section')
         check(target.pointerFocus && noFrame(target) && target.color === Style.selectedFillFor(target.foreground, target.accent), 'settings tabs retain the native selected fill without stuck focus paint')
         events.keyClick(Qt.Key_Tab, Qt.NoModifier, -1)
@@ -100,6 +112,9 @@ ShellRoot {
         finished = true
         console.log('CONTROL_STATES_QML', true)
         Qt.quit()
+      }
+      } finally {
+        if (!suite.finished) phaseTimer.start()
       }
     }
   }
