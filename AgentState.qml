@@ -128,7 +128,17 @@ QtObject {
   property string serverIp: ''
   property string protocol: ''
   property string connectionErrorCode: ''
+  property string connectionError: ''
   property var networkConflicts: []
+  // Steady-state watchdog: recycle a session that stays unhealthy behind
+  // the kill-switch instead of blackholing traffic indefinitely.
+  property double unhealthySinceMs: 0
+  property bool staleReconnectPending: false
+  property int staleRecoveryAttempts: 0
+  property double lastStaleRecoveryMs: 0
+  property int staleThresholdMs: 600000
+  property int staleRetryCooldownMs: 300000
+  property int staleMaxRecoveries: 3
   property int restrictionReasonCode: 0
   property int latencyMs: 0
   property bool trafficKnown: false
@@ -1167,6 +1177,7 @@ QtObject {
   }
 
   function disconnect() {
+    staleReconnectPending = false
     if (!ipcBridge.running || accountStatus === 'unknown' ||
         (signedIn && !connectionObservationKnown)) {
       queueAgentAction('disconnect')
@@ -1181,6 +1192,7 @@ QtObject {
   }
 
   function cancelConnection() {
+    staleReconnectPending = false
     if (requestPending('connection.cancel')) return
     send('connection.cancel', {})
     stateChangedByUser()
@@ -1193,6 +1205,63 @@ QtObject {
     else if (tunnelOperationBusy) return
     else if (connected) disconnect()
     else quickConnect()
+  }
+
+  // Steady-state watchdog: a live session can go stale (e.g. the Local
+  // Agent fails the WireGuard handshake for hours) while the kill-switch
+  // keeps holding all traffic. The backend retries the same session
+  // instead of recycling it, so after a bounded period of continuously
+  // unhealthy state we recycle the session with a fresh resolve+connect
+  // and say so in the panel. Explicit user disconnects clear the pending
+  // flag above, so this never reconnects against the user's intent.
+  function isConnectionUnhealthy() {
+    if (status === 'connecting' || status === 'error') return true
+    return status === 'connected' && connectionError.length > 0
+  }
+
+  function checkStaleConnection() {
+    if (!signedIn || !agentAvailable || !ipcBridge.running ||
+        (connectionAvailabilityKnown && !connectionAvailable)) {
+      unhealthySinceMs = 0
+      return
+    }
+    if (status === 'disconnected' || status === 'unknown') {
+      unhealthySinceMs = 0
+      if (!staleReconnectPending) staleRecoveryAttempts = 0
+      return
+    }
+    if (tunnelOperationBusy || staleReconnectPending) return
+    if (!isConnectionUnhealthy()) {
+      unhealthySinceMs = 0
+      staleRecoveryAttempts = 0
+      return
+    }
+    var nowMs = Date.now()
+    if (!unhealthySinceMs) {
+      unhealthySinceMs = nowMs
+      return
+    }
+    if (nowMs - unhealthySinceMs < staleThresholdMs) return
+    if (nowMs - lastStaleRecoveryMs < staleRetryCooldownMs) return
+    if (staleRecoveryAttempts >= staleMaxRecoveries) {
+      if (lastErrorCode !== 'stale_connection') {
+        lastError = 'VPN tunnel unhealthy for a while and automatic recovery gave up. Try another server.'
+        lastErrorCode = 'stale_connection'
+        lastErrorDetails = { server: String(serverName || '') }
+        lastErrorRetryable = true
+      }
+      return
+    }
+    staleRecoveryAttempts += 1
+    lastStaleRecoveryMs = nowMs
+    unhealthySinceMs = nowMs
+    lastError = 'VPN tunnel unhealthy; reconnecting with a fresh session.'
+    lastErrorCode = 'stale_connection_recovering'
+    lastErrorDetails = { server: String(serverName || '') }
+    lastErrorRetryable = false
+    staleReconnectPending = true
+    if (status === 'connected') send('connection.disconnect', {})
+    else if (status === 'connecting') send('connection.cancel', {})
   }
 
   function deferFeature(code, message) {
@@ -1557,6 +1626,10 @@ QtObject {
     serverIp = connection.server_ip || ''
     protocol = String(connection.protocol || '')
     connectionErrorCode = String(connection.error_code || '')
+    connectionError = String(connection.error || '')
+    if (staleReconnectPending && status === 'disconnected' &&
+        !requestPending('connection.resolve') && !tunnelOperationBusy)
+      staleReconnectPending = resolveConnection(null) === ''
     networkConflicts = Array.isArray(connection.network_conflicts)
       ? connection.network_conflicts : []
     restrictionReasonCode = Number(connection.restriction_reason_code || 0)
@@ -1748,6 +1821,13 @@ QtObject {
     interval: 100
     repeat: false
     onTriggered: root.socketWanted = root.socketDemandActive()
+  }
+
+  property Timer staleWatchdogTimer: Timer {
+    interval: 60000
+    repeat: true
+    running: true
+    onTriggered: root.checkStaleConnection()
   }
 
   property Timer postConnectTimer: Timer {
